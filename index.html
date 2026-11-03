@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Essen">
+<meta name="theme-color" content="#f2f2f7">
+<title>Essen</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%23ff9500'/%3E%3Ctext x='90' y='122' font-size='100' text-anchor='middle'%3E%F0%9F%8D%B2%3C/text%3E%3C/svg%3E">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --bg:#f2f2f7; --card:#fff; --label:#000; --label2:rgba(60,60,67,.6); --label3:rgba(60,60,67,.3);
+  --sep:rgba(60,60,67,.18); --fill:rgba(120,120,128,.12);
+  --blue:#007aff; --green:#34c759; --orange:#ff9500; --red:#ff3b30;
+  --bar:rgba(249,249,249,.88);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#000; --card:#1c1c1e; --label:#fff; --label2:rgba(235,235,245,.6); --label3:rgba(235,235,245,.3);
+    --sep:rgba(84,84,88,.6); --fill:rgba(120,120,128,.24); --blue:#0a84ff; --green:#30d158; --orange:#ff9f0a; --red:#ff453a;
+    --bar:rgba(29,29,31,.88); color-scheme:dark;}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--label);
+  font:17px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+button,input,textarea{font:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer}
+#app{min-height:100vh;padding:env(safe-area-inset-top) 0 calc(84px + env(safe-area-inset-bottom))}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px}
+h1.large{font-size:34px;line-height:1.15;font-weight:700;letter-spacing:.2px;margin:22px 0 14px}
+.sub{color:var(--label2);font-size:15px;margin:-6px 0 14px}
+.group-title{font-size:13px;color:var(--label2);text-transform:uppercase;letter-spacing:.3px;margin:22px 16px 7px}
+.group{background:var(--card);border-radius:12px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:11px 16px;min-height:48px;width:100%;text-align:left;position:relative}
+.row+.row::before{content:"";position:absolute;top:0;left:16px;right:0;border-top:.5px solid var(--sep)}
+.row .grow{flex:1;min-width:0}
+.row .t{font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .s{font-size:14px;color:var(--label2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chev{color:var(--label3);font-size:20px;font-weight:600}
+.thumb{width:44px;height:44px;border-radius:9px;background:var(--fill);object-fit:cover;flex:none;display:grid;place-items:center;font-size:22px}
+.search{display:flex;align-items:center;gap:8px;background:var(--fill);border-radius:10px;padding:8px 10px;margin-bottom:8px}
+.search input{flex:1;border:0;background:none;outline:0;min-width:0}
+.btn{display:block;width:100%;background:var(--blue);color:#fff;border-radius:14px;padding:15px;font-weight:600;text-align:center}
+.btn.sec{background:var(--fill);color:var(--blue)}
+.btn.danger{background:var(--card);color:var(--red)}
+.btn:active,.row:active,.pill:active{opacity:.6}
+.btn[disabled]{opacity:.4}
+.field{display:flex;align-items:center;gap:12px;padding:11px 16px;position:relative}
+.field+.field::before{content:"";position:absolute;top:0;left:16px;right:0;border-top:.5px solid var(--sep)}
+.field input,.field textarea{flex:1;border:0;background:none;outline:0;min-width:0;resize:none}
+.field input::placeholder,.field textarea::placeholder{color:var(--label3)}
+.field .amt{flex:0 0 34%}
+.xbtn{color:var(--red);font-size:22px;line-height:1;padding:4px}
+.tabbar{position:fixed;left:0;right:0;bottom:0;background:var(--bar);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-top:.5px solid var(--sep);display:flex;justify-content:space-around;padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:10}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--label2);padding:2px 0}
+.tab svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tab.on{color:var(--blue)}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:93vh;overflow:auto;border-radius:14px 14px 0 0;padding:0 16px calc(24px + env(safe-area-inset-bottom));animation:up .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+.sheet-head{position:sticky;top:0;background:var(--bg);display:flex;justify-content:space-between;align-items:center;padding:14px 0 10px;z-index:2}
+.sheet-head h2{margin:0;font-size:17px;font-weight:600;position:absolute;left:0;right:0;text-align:center;pointer-events:none}
+.sheet-head button{color:var(--blue);font-size:17px;z-index:1}
+.sheet-head .bold{font-weight:600}
+.hero{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;margin-bottom:8px;background:var(--fill)}
+.photo-pick{display:grid;place-items:center;aspect-ratio:16/9;background:var(--card);border-radius:12px;color:var(--blue);overflow:hidden;position:relative}
+.photo-pick img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h3{margin:0 0 2px;font-size:13px;color:var(--label2);text-transform:uppercase;letter-spacing:.3px;font-weight:400}
+.card .big{font-size:26px;font-weight:700;margin:4px 0 12px;line-height:1.2}
+.seg{display:flex;background:var(--fill);border-radius:9px;padding:2px;gap:2px}
+.seg button{flex:1;padding:8px 4px;border-radius:7px;font-size:14px;font-weight:500}
+.seg button.on{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.seg button.on.g{color:var(--green)} .seg button.on.o{color:var(--orange)} .seg button.on.r{color:var(--red)}
+.badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:13px;font-weight:600;background:var(--fill)}
+.badge.g{color:var(--green)} .badge.o{color:var(--orange)} .badge.r{color:var(--red)}
+.empty{text-align:center;color:var(--label2);padding:36px 24px}
+.empty .ic{font-size:44px;margin-bottom:6px}
+.toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(40,40,42,.94);color:#fff;
+  padding:10px 16px;border-radius:99px;font-size:15px;z-index:40;max-width:90%}
+/* login */
+.login{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:22px}
+.login .logo{font-size:56px}
+.login h1{margin:0;font-size:28px}
+.dots{display:flex;gap:16px;height:16px}
+.dots i{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--label2)}
+.dots i.f{background:var(--label);border-color:var(--label)}
+.shake{animation:sh .4s}
+@keyframes sh{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.keys{display:grid;grid-template-columns:repeat(3,76px);gap:14px}
+.keys button{width:76px;height:76px;border-radius:50%;background:var(--fill);font-size:30px;font-weight:300}
+.keys button:active{background:var(--label3)}
+.keys .ghost{background:none;font-size:16px}
+.login .seg{width:230px}
+.hint{color:var(--label2);font-size:14px;text-align:center;max-width:300px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* ============================================================
+   EINSTELLUNGEN – hier trägst du nach dem Supabase-Setup 2 Werte ein
+   ============================================================ */
+const CFG = {
+  url: "https://jriotartczohymyuehzt.supabase.co",
+  key: "sb_publishable_FUELi-eub1l9axZAYR9EOg_Azh4SUJ7"
+};
+const PEOPLE = {
+  emil: { name: "Emil", email: "emil@essen.app" },
+  mama: { name: "Mama", email: "mama@essen.app" }
+};
+const SLOTS = [
+  { id: "mittag", label: "Mittagessen", icon: "☀️" },
+  { id: "abend",  label: "Abendessen",  icon: "🌙" }
+];
+const REACTIONS = [
+  { id: "ok",    label: "Okay",       c: "g" },
+  { id: "meh",   label: "Nicht so",   c: "o" },
+  { id: "nope",  label: "Kein Bock",  c: "r" }
+];
+
+/* ---------- Helfer ---------- */
+const $app = document.getElementById("app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+const dateLabel = () => new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
+function toast(m){ document.querySelector(".toast")?.remove(); const t=document.createElement("div"); t.className="toast"; t.textContent=m; document.body.appendChild(t); setTimeout(()=>t.remove(),2400); }
+function resize(file){
+  return new Promise(res=>{
+    const r=new FileReader();
+    r.onload=()=>{ const i=new Image(); i.onload=()=>{
+      const s=Math.min(1,900/Math.max(i.width,i.height)), c=document.createElement("canvas");
+      c.width=Math.round(i.width*s); c.height=Math.round(i.height*s);
+      c.getContext("2d").drawImage(i,0,0,c.width,c.height); res(c.toDataURL("image/jpeg",.78)); };
+      i.src=r.result; };
+    r.readAsDataURL(file);
+  });
+}
+const ICONS = {
+  heute:  '<svg viewBox="0 0 26 26"><circle cx="13" cy="13" r="5"/><path d="M13 2.5v2.5M13 21v2.5M2.5 13H5M21 13h2.5M5.6 5.6l1.8 1.8M18.6 18.6l1.8 1.8M5.6 20.4l1.8-1.8M18.6 7.4l1.8-1.8"/></svg>',
+  rezepte:'<svg viewBox="0 0 26 26"><path d="M4 7h18M4 13h18M4 19h12"/></svg>',
+  neu:    '<svg viewBox="0 0 26 26"><circle cx="13" cy="13" r="9.5"/><path d="M13 8.5v9M8.5 13h9"/></svg>',
+  ideen:  '<svg viewBox="0 0 26 26"><path d="M9 20h8M10 23h6M13 3a7 7 0 0 0-4 12.7c.7.6 1 1.3 1 2.3h6c0-1 .3-1.7 1-2.3A7 7 0 0 0 13 3z"/></svg>'
+};
+
+/* ---------- State ---------- */
+const S = { sb:null, who:null, tab:"heute", recipes:[], ideas:[], meals:[], q:"", pin:"", person: localStorage.getItem("who") || "mama" };
+
+/* ---------- Start ---------- */
+(async function init(){
+  if (CFG.url.startsWith("DEINE")) { $app.innerHTML = `<div class="login"><div class="logo">🛠️</div><h1>Fast fertig</h1><p class="hint">Trage in der Datei index.html oben bei EINSTELLUNGEN deine Supabase-URL und den Key ein (siehe Anleitung).</p></div>`; return; }
+  S.sb = supabase.createClient(CFG.url, CFG.key);
+  const { data } = await S.sb.auth.getSession();
+  if (data.session) { setWho(data.session.user.email); await loadAll(); renderApp(); } else renderLogin();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && S.who) refresh(); });
+  setInterval(() => { if (S.who && !document.querySelector(".scrim") && !document.activeElement?.matches("input,textarea")) refresh(); }, 20000);
+})();
+function setWho(email){ S.who = Object.keys(PEOPLE).find(k => PEOPLE[k].email === email) || "mama"; }
+async function loadAll(){
+  const [r,i,m] = await Promise.all([
+    S.sb.from("recipes").select("*").order("name"),
+    S.sb.from("ideas").select("*").order("created_at",{ascending:false}),
+    S.sb.from("meals").select("*").eq("day", today())
+  ]);
+  if (r.error || i.error || m.error) { toast("Laden hat nicht geklappt. Internet prüfen."); return; }
+  S.recipes = r.data; S.ideas = i.data; S.meals = m.data;
+}
+async function refresh(){ await loadAll(); renderApp(); }
+
+/* ---------- Login ---------- */
+function renderLogin(){
+  $app.innerHTML = `
+  <div class="login">
+    <div class="logo">🍲</div>
+    <h1>Essen</h1>
+    <div class="seg">${Object.entries(PEOPLE).map(([k,p])=>`<button class="${S.person===k?"on":""}" onclick="pickPerson('${k}')">${p.name}</button>`).join("")}</div>
+    <div class="dots" id="dots">${[0,1,2,3].map(i=>`<i class="${i<S.pin.length?"f":""}"></i>`).join("")}</div>
+    <div class="keys">
+      ${[1,2,3,4,5,6,7,8,9].map(n=>`<button onclick="pinKey('${n}')">${n}</button>`).join("")}
+      <button class="ghost" disabled></button><button onclick="pinKey('0')">0</button><button class="ghost" onclick="pinKey('<')">Löschen</button>
+    </div>
+    <p class="hint">PIN eingeben</p>
+  </div>`;
+}
+function pickPerson(k){ S.person=k; S.pin=""; localStorage.setItem("who",k); renderLogin(); }
+async function pinKey(k){
+  if (k==="<") S.pin = S.pin.slice(0,-1); else if (S.pin.length<4) S.pin += k;
+  renderLogin();
+  if (S.pin.length===4){
+    const { error } = await S.sb.auth.signInWithPassword({ email: PEOPLE[S.person].email, password: S.pin + "essen" });
+    if (error){ const d=document.getElementById("dots"); d.classList.add("shake"); S.pin=""; setTimeout(renderLogin,420); return; }
+    S.who = S.person; await loadAll(); renderApp();
+  }
+}
+async function logout(){ await S.sb.auth.signOut(); S.who=null; S.pin=""; renderLogin(); }
+
+/* ---------- Shell ---------- */
+function renderApp(){
+  const views = { heute:viewHeute, rezepte:viewRezepte, neu:viewNeu, ideen:viewIdeen };
+  const tabs = [["heute","Heute"],["rezepte","Rezepte"],["neu","Neu"],["ideen","Vorschläge"]];
+  const scroll = window.scrollY;
+  $app.innerHTML = `<div class="wrap">${views[S.tab]()}</div>
+  <nav class="tabbar">${tabs.map(([id,l])=>`<button class="tab ${S.tab===id?"on":""}" onclick="go('${id}')">${ICONS[id]}<span>${l}</span></button>`).join("")}</nav>`;
+  window.scrollTo(0, scroll);
+}
+function go(t){ S.tab=t; if(t!=="rezepte") S.q=""; renderApp(); window.scrollTo(0,0); }
+
+/* ---------- Heute ---------- */
+function viewHeute(){
+  const cards = SLOTS.map(sl=>{
+    const m = S.meals.find(x=>x.slot===sl.id);
+    const rx = m && REACTIONS.find(r=>r.id===m.reaction);
+    let body;
+    if (!m) {
+      body = `<div class="big" style="color:var(--label3)">Noch nichts geplant</div>` +
+        (S.who==="mama" ? `<button class="btn" onclick="pickMeal('${sl.id}')">Gericht auswählen</button>` : `<div class="sub" style="margin:0">Mama wählt das Gericht aus.</div>`);
+    } else {
+      const rec = S.recipes.find(r=>r.id===m.recipe_id);
+      body = `<div class="big" ${rec?`onclick="openRecipe('${rec.id}')"`:""}>${esc(m.title)}</div>`;
+      if (S.who==="emil") {
+        body += `<div class="seg">${REACTIONS.map(r=>`<button class="${m.reaction===r.id?"on "+r.c:""}" onclick="react('${m.id}','${r.id}')">${r.label}</button>`).join("")}</div>`;
+      } else {
+        body += rx ? `<span class="badge ${rx.c}">Emil: ${rx.label}</span>` : `<span class="badge">Emil hat noch nicht geantwortet</span>`;
+        body += `<div style="height:12px"></div><button class="btn sec" onclick="pickMeal('${sl.id}')">Ändern</button>`;
+      }
+    }
+    return `<div class="card"><h3>${sl.icon} ${sl.label}</h3>${body}</div>`;
+  }).join("");
+  return `<h1 class="large">Heute</h1><p class="sub">${dateLabel()}</p>${cards}
+  <div style="height:8px"></div><button class="btn danger" onclick="logout()">Abmelden (${PEOPLE[S.who].name})</button>`;
+}
+function pickMeal(slot){
+  const list = S.recipes.map(r=>`<button class="row" onclick="setMeal('${slot}','${r.id}')">${thumb(r)}<div class="grow"><div class="t">${esc(r.name)}</div></div></button>`).join("");
+  sheet(`Was gibt es?`, `
+    <div class="group-title" style="margin-top:4px">Eigener Text</div>
+    <div class="group"><div class="field"><input id="free" placeholder="z. B. Fisch mit Kartoffeln"></div></div>
+    <div style="height:10px"></div><button class="btn" onclick="setMealFree('${slot}')">Übernehmen</button>
+    ${S.recipes.length?`<div class="group-title">Aus Rezepten</div><div class="group">${list}</div>`:""}`);
+}
+async function upsertMeal(slot, title, recipe_id){
+  const { error } = await S.sb.from("meals").upsert({ day:today(), slot, title, recipe_id, reaction:null, set_by:S.who }, { onConflict:"day,slot" });
+  if (error) return toast("Speichern fehlgeschlagen"); closeSheet(); await refresh();
+}
+function setMeal(slot,id){ const r=S.recipes.find(x=>x.id===id); upsertMeal(slot, r.name, r.id); }
+function setMealFree(slot){ const v=document.getElementById("free").value.trim(); if(!v) return toast("Bitte etwas eintragen"); upsertMeal(slot, v, null); }
+async function react(id, r){
+  const { error } = await S.sb.from("meals").update({ reaction:r }).eq("id", id);
+  if (error) return toast("Hat nicht geklappt"); await refresh();
+}
+
+/* ---------- Rezepte ---------- */
+function thumb(r){ return r.image ? `<img class="thumb" src="${r.image}" alt="">` : `<div class="thumb">🍽️</div>`; }
+function viewRezepte(){
+  const q = S.q.toLowerCase();
+  const list = S.recipes.filter(r=>r.name.toLowerCase().includes(q));
+  const rows = list.map(r=>`<button class="row" onclick="openRecipe('${r.id}')">${thumb(r)}<div class="grow"><div class="t">${esc(r.name)}</div>${r.ingredients?.length?`<div class="s">${r.ingredients.length} Zutaten</div>`:""}</div><span class="chev">›</span></button>`).join("");
+  return `<h1 class="large">Rezepte</h1>
+  <div class="search"><span style="color:var(--label2)">🔍</span><input id="q" type="search" placeholder="Suchen" value="${esc(S.q)}" oninput="S.q=this.value;keepFocusRender()"></div>
+  ${list.length?`<div class="group">${rows}</div>`:`<div class="empty"><div class="ic">🍳</div>${S.recipes.length?"Nichts gefunden.":"Noch keine Rezepte.<br>Lege unter „Neu“ das erste an."}</div>`}`;
+}
+function keepFocusRender(){ const p=document.getElementById("q").selectionStart; renderApp(); const el=document.getElementById("q"); el.focus(); el.setSelectionRange(p,p); }
+function openRecipe(id){
+  const r = S.recipes.find(x=>x.id===id); if(!r) return;
+  const ing = (r.ingredients||[]).map(i=>`<div class="row"><div class="grow t">${esc(i.name)}</div><div style="color:var(--label2)">${esc(i.amount)}</div></div>`).join("");
+  sheet(esc(r.name), `
+    ${r.image?`<img class="hero" src="${r.image}" alt="">`:""}
+    ${ing?`<div class="group-title" style="margin-top:8px">Zutaten</div><div class="group">${ing}</div>`:""}
+    ${r.notes?`<div class="group-title">Notizen</div><div class="group"><div class="row" style="white-space:pre-wrap">${esc(r.notes)}</div></div>`:""}
+    ${!ing && !r.notes && !r.image ? `<div class="empty">Nur der Name – keine Details.</div>`:""}
+    <div style="height:18px"></div>
+    <button class="btn sec" onclick="editRecipe('${r.id}')">Bearbeiten</button>`, "Fertig");
+}
+
+/* ---------- Neu / Bearbeiten ---------- */
+let draft = null;
+function newDraft(r){ draft = r ? { id:r.id, name:r.name, image:r.image, notes:r.notes||"", ing:(r.ingredients||[]).map(i=>({...i})) } : { id:null, name:"", image:null, notes:"", ing:[{amount:"",name:""}] }; }
+function viewNeu(){ if(!draft) newDraft(null); return `<h1 class="large">Neues Rezept</h1>${formHTML()}<div style="height:14px"></div><button class="btn" onclick="saveRecipe(false)">Rezept speichern</button>`; }
+function formHTML(){
+  return `
+  <label class="photo-pick" style="cursor:pointer">${draft.image?`<img src="${draft.image}" alt="">`:`<span>📷 Foto hinzufügen</span>`}
+    <input type="file" accept="image/*" hidden onchange="pickPhoto(this)"></label>
+  <div class="group-title">Name</div>
+  <div class="group"><div class="field"><input id="f-name" placeholder="z. B. Lasagne" value="${esc(draft.name)}" oninput="draft.name=this.value"></div></div>
+  <div class="group-title">Zutaten (optional)</div>
+  <div class="group">
+    ${draft.ing.map((x,i)=>`<div class="field"><input class="amt" placeholder="Menge" value="${esc(x.amount)}" oninput="draft.ing[${i}].amount=this.value"><input placeholder="Zutat" value="${esc(x.name)}" oninput="draft.ing[${i}].name=this.value"><button class="xbtn" onclick="rmIng(${i})" aria-label="Entfernen">⊖</button></div>`).join("")}
+    <button class="row" style="color:var(--blue)" onclick="addIng()">⊕ Zutat hinzufügen</button>
+  </div>
+  <div class="group-title">Notizen (optional)</div>
+  <div class="group"><div class="field"><textarea rows="4" placeholder="Zubereitung, Tipps …" oninput="draft.notes=this.value">${esc(draft.notes)}</textarea></div></div>`;
+}
+async function pickPhoto(inp){ if(!inp.files[0]) return; draft.image = await resize(inp.files[0]); rerenderForm(); }
+function addIng(){ draft.ing.push({amount:"",name:""}); rerenderForm(); }
+function rmIng(i){ draft.ing.splice(i,1); if(!draft.ing.length) draft.ing.push({amount:"",name:""}); rerenderForm(); }
+function rerenderForm(){
+  const sh = document.querySelector(".sheet");
+  if (sh) { const st=sh.scrollTop; sh.querySelector(".form").innerHTML = formHTML(); sh.scrollTop=st; } else renderApp();
+}
+function editRecipe(id){
+  newDraft(S.recipes.find(x=>x.id===id));
+  sheet("Bearbeiten", `<div class="form">${formHTML()}</div><div style="height:14px"></div>
+    <button class="btn" onclick="saveRecipe(true)">Speichern</button><div style="height:10px"></div>
+    <button class="btn danger" onclick="delRecipe('${id}')">Rezept löschen</button>`, "Abbrechen", () => { draft=null; });
+}
+async function saveRecipe(inSheet){
+  const name = draft.name.trim(); if(!name) return toast("Bitte einen Namen eingeben");
+  const row = { name, image:draft.image, notes:draft.notes.trim()||null, ingredients:draft.ing.filter(x=>x.name.trim()||x.amount.trim()), created_by:S.who };
+  const q = draft.id ? S.sb.from("recipes").update(row).eq("id",draft.id) : S.sb.from("recipes").insert(row);
+  const { error } = await q; if(error) return toast("Speichern fehlgeschlagen");
+  draft=null; if(inSheet) closeSheet(); else { S.tab="rezepte"; } toast("Gespeichert"); await refresh();
+}
+async function delRecipe(id){
+  if(!confirm("Dieses Rezept wirklich löschen?")) return;
+  const { error } = await S.sb.from("recipes").delete().eq("id",id); if(error) return toast("Löschen fehlgeschlagen");
+  draft=null; closeSheet(); await refresh();
+}
+
+/* ---------- Vorschläge ---------- */
+function viewIdeen(){
+  const rows = S.ideas.map(i=>`<div class="row"><div class="grow"><div class="t" style="white-space:normal">${esc(i.text)}</div><div class="s">von ${PEOPLE[i.created_by]?.name||"?"}</div></div>
+    <button class="xbtn" style="color:var(--blue);font-size:15px" onclick="ideaToRecipe('${i.id}')">Rezept</button>
+    <button class="xbtn" onclick="delIdea('${i.id}')" aria-label="Löschen">⊖</button></div>`).join("");
+  return `<h1 class="large">Vorschläge</h1><p class="sub">Ideen sammeln, was es mal geben könnte.</p>
+  <div class="group"><div class="field"><input id="idea" placeholder="Neue Idee" onkeydown="if(event.key==='Enter')addIdea()"><button style="color:var(--blue);font-weight:600" onclick="addIdea()">Hinzufügen</button></div></div>
+  ${S.ideas.length?`<div class="group-title">Gesammelt</div><div class="group">${rows}</div>`:`<div class="empty"><div class="ic">💡</div>Noch keine Vorschläge.</div>`}`;
+}
+async function addIdea(){
+  const el=document.getElementById("idea"), v=el.value.trim(); if(!v) return;
+  const { error } = await S.sb.from("ideas").insert({ text:v, created_by:S.who }); if(error) return toast("Hat nicht geklappt"); await refresh();
+}
+async function delIdea(id){ await S.sb.from("ideas").delete().eq("id",id); await refresh(); }
+function ideaToRecipe(id){ const i=S.ideas.find(x=>x.id===id); newDraft(null); draft.name=i.text; S.tab="neu"; renderApp(); window.scrollTo(0,0); }
+
+/* ---------- Sheet ---------- */
+let onClose=null;
+function sheet(title, html, closeLabel="Schließen", cb){
+  closeSheet(true); onClose=cb||null;
+  const el=document.createElement("div"); el.className="scrim";
+  el.innerHTML=`<div class="sheet" role="dialog"><div class="sheet-head"><span></span><h2>${title}</h2><button class="bold" onclick="closeSheet()">${closeLabel}</button></div>${html}</div>`;
+  el.addEventListener("click",e=>{ if(e.target===el) closeSheet(); });
+  document.body.appendChild(el); document.body.style.overflow="hidden";
+}
+function closeSheet(silent){
+  document.querySelector(".scrim")?.remove(); document.body.style.overflow="";
+  if(!silent && onClose){ onClose(); } onClose=null;
+}
+</script>
+</body>
+</html>
