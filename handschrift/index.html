@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Handschrift">
+</head>
+<body>
+<!--APP-START-->
+<title>Handschrift-Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<style>
+/* Layout: Kopf + drei Arbeitsschritte als Reiter; Schritt 3 = Einstellungen links, Seitenvorschau rechts (stapelt auf schmalen Geräten). */
+:root{
+  --bg:#f4f5f9; --surface:#ffffff; --surface2:#eef0f6; --line:#dce0ea; --fg:#151a2c; --muted:#5a6177;
+  --accent:#2a43a6; --accent-fg:#ffffff; --accent-weak:#e6eafa; --ok:#1d7a4b; --warn:#a0620b; --danger:#b3242f;
+  --paper:#ffffff; --guide:#c4d5ea; --guide2:#dfe8f4; --shadow:0 1px 2px rgba(21,26,44,.06),0 8px 24px rgba(21,26,44,.07);
+  --f-display:"Space Grotesk",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-hand:"Caveat","Bradley Hand","Segoe Print",cursive;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e111a; --surface:#161a26; --surface2:#1d2231; --line:#2a3043; --fg:#e7eaf3; --muted:#9aa2b9;
+  --accent:#93a6ff; --accent-fg:#0e111a; --accent-weak:#1f2744; --ok:#5fcf95; --warn:#e8b35a; --danger:#ff7b84;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e111a; --surface:#161a26; --surface2:#1d2231; --line:#2a3043; --fg:#e7eaf3; --muted:#9aa2b9;
+  --accent:#93a6ff; --accent-fg:#0e111a; --accent-weak:#1f2744; --ok:#5fcf95; --warn:#e8b35a; --danger:#ff7b84;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+button,input,textarea,select{font:inherit;color:inherit}
+.wrap{max-width:1180px;margin:0 auto}
+header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-block:28px 18px}
+.brand h1{font:700 28px/1.1 var(--f-display);letter-spacing:-.01em;margin:0;text-wrap:balance}
+.brand p{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.brand .hand{font-family:var(--f-hand);font-size:1.35em;color:var(--accent);font-weight:500}
+nav.steps{display:flex;gap:6px;background:var(--surface2);padding:5px;border-radius:12px;flex-wrap:wrap}
+nav.steps button{border:0;background:transparent;padding:9px 14px;border-radius:9px;cursor:pointer;color:var(--muted);font-weight:500;display:flex;gap:8px;align-items:center}
+nav.steps button .n{font:600 12px/1 var(--f-display);width:20px;height:20px;border-radius:50%;display:grid;place-items:center;border:1.5px solid currentColor}
+nav.steps button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:var(--shadow)}
+nav.steps button[aria-selected="true"] .n{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.panel{display:grid;gap:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;min-width:0}
+.card h2{font:600 18px/1.25 var(--f-display);margin:0 0 6px}
+.card h3{font:600 14px/1.3 var(--f-display);margin:0 0 8px;letter-spacing:.02em}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:18px}
+.btn{border:1px solid var(--line);background:var(--surface);padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:500;display:inline-flex;gap:8px;align-items:center;justify-content:center}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--accent);padding-inline:8px}
+.btn.danger{color:var(--danger)}
+.btn:disabled{opacity:.5;cursor:default}
+ol.howto{margin:8px 0 0;padding-left:20px;display:grid;gap:6px}
+ol.howto li::marker{font-family:var(--f-display);font-weight:600;color:var(--accent)}
+.checks{display:grid;gap:8px;margin:12px 0 16px}
+.checks label{min-width:0;display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.checks label .chars{font-family:var(--f-hand);font-size:19px;color:var(--muted);margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48%;min-width:0}
+.checks input{accent-color:var(--accent);width:18px;height:18px}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:28px 18px;text-align:center;display:grid;gap:10px;justify-items:center;cursor:pointer;background:var(--surface2)}
+.drop.over{border-color:var(--accent);background:var(--accent-weak)}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.status{font-size:14px;padding:10px 12px;border-radius:10px;background:var(--surface2)}
+.status.ok{color:var(--ok)} .status.warn{color:var(--warn)} .status.err{color:var(--danger)}
+.banner{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 14px;border-radius:12px;background:var(--accent-weak);color:var(--fg)}
+.banner b{font-family:var(--f-display)}
+/* Bibliothek */
+.libsec{display:grid;gap:10px}
+.libsec + .libsec{margin-top:18px}
+.libhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}
+.tile{position:relative;border:1px solid var(--line);border-radius:10px;background:var(--paper);aspect-ratio:1/1.1;max-width:100%;cursor:pointer;padding:0;overflow:hidden;display:grid;place-items:center}
+.tile img{max-width:70%;max-height:62%;object-fit:contain}
+.tile .lab{position:absolute;left:6px;top:3px;font:600 12px/1.2 var(--f-display);color:#7a8199}
+.tile .cnt{position:absolute;right:5px;bottom:3px;font:600 11px/1.2 var(--f-body);font-variant-numeric:tabular-nums;color:#7a8199}
+.tile.full .cnt{color:#1d7a4b}
+.tile.empty{background:var(--surface2)}
+.tile.empty .lab{font-size:20px;left:0;right:0;top:0;bottom:0;display:grid;place-items:center;color:var(--muted);opacity:.6}
+/* Zeichnen */
+.drawhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.bigchar{font:600 40px/1 var(--f-display);width:64px;height:64px;border-radius:12px;background:var(--accent-weak);display:grid;place-items:center;color:var(--accent)}
+.cells{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
+@media (max-width:620px){.cells{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cell{position:relative;border:1px solid #d6dbe6;border-radius:8px;overflow:hidden;background:
+  linear-gradient(to bottom,transparent calc(67.44% - 1px),#b3c7e3 calc(67.44% - 1px),#b3c7e3 calc(67.44% + 1px),transparent calc(67.44% + 1px)),
+  linear-gradient(to bottom,transparent calc(39.53% - .5px),#d8e3f2 calc(39.53% - .5px),#d8e3f2 calc(39.53% + .5px),transparent calc(39.53% + .5px)),#fff;
+  aspect-ratio:20.75/21.5;max-width:100%}
+.cell canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.cell .x{position:absolute;right:4px;top:4px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(21,26,44,.07);color:#5a6177;cursor:pointer;font-size:16px;line-height:1}
+.cell .k{position:absolute;left:7px;top:4px;font:600 11px var(--f-display);color:#9aa3ba}
+.charpick{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px}
+.charpick button{min-width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font:500 15px var(--f-display);position:relative}
+.charpick button.has{border-color:var(--ok)}
+.charpick button.cur{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+/* Schreiben */
+.write{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:900px){.write{grid-template-columns:minmax(0,1fr)}}
+textarea#text{width:100%;min-height:200px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);line-height:1.5}
+.fields{display:grid;gap:12px;margin-top:14px}
+.field{display:grid;gap:5px}
+.field > span{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between}
+.field > span output{font-variant-numeric:tabular-nums;text-transform:none;letter-spacing:0;color:var(--fg);font-weight:500}
+.field input[type=range]{width:100%;accent-color:var(--accent)}
+.field select{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:var(--surface)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.inks{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ink{width:32px;height:32px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.ink[aria-pressed="true"]{box-shadow:0 0 0 2px var(--accent)}
+.inks input[type=color]{width:36px;height:32px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--surface)}
+.sticky{position:sticky;top:max(12px,env(safe-area-inset-top,0px))}
+.pages{display:grid;gap:16px;justify-items:center}
+.pages canvas{width:100%;max-width:640px;height:auto;background:#fff;border-radius:4px;box-shadow:var(--shadow)}
+.pvhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.missing{font-size:13px;color:var(--warn)}
+.result{display:grid;gap:10px;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);margin-top:12px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:500;z-index:20;max-width:calc(100vw - 32px)}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:sp .8s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:3s}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Handschrift-Studio</h1>
+      <p>Text rein, <span class="hand">deine Handschrift</span> raus – als PDF, das du direkt in GoodNotes öffnest.</p>
+    </div>
+    <nav class="steps" role="tablist" aria-label="Arbeitsschritte">
+      <button role="tab" id="tab-vorlage" data-tab="vorlage"><span class="n">1</span>Vorlage</button>
+      <button role="tab" id="tab-schrift" data-tab="schrift"><span class="n">2</span>Handschrift</button>
+      <button role="tab" id="tab-schreiben" data-tab="schreiben"><span class="n">3</span>Schreiben</button>
+    </nav>
+  </header>
+
+  <!-- 1 VORLAGE -->
+  <section class="panel" id="p-vorlage" hidden>
+    <div class="grid2">
+      <div class="card">
+        <h2>Vorlage erstellen</h2>
+        <p class="muted">Jedes Zeichen bekommt eine Zeile mit 8 Kästchen. Schreib es 8-mal, jedes Mal ein bisschen anders – so wirkt der fertige Text später natürlich.</p>
+        <div class="checks" id="sets"></div>
+        <div class="row">
+          <button class="btn primary" id="btn-template">Vorlage als PDF laden</button>
+          <span class="small muted" id="tpl-info"></span>
+        </div>
+        <div id="tpl-result"></div>
+      </div>
+      <div class="card">
+        <h2>So geht's mit GoodNotes</h2>
+        <ol class="howto">
+          <li>Vorlage laden und mit <b>Teilen → GoodNotes</b> als neues Dokument importieren.</li>
+          <li>In jedes Kästchen das Zeichen vom Zeilenanfang schreiben. Kleinbuchstaben sitzen auf der <b>dunkleren Grundlinie</b>, die gestrichelte Linie zeigt die Höhe von „x“.</li>
+          <li>Dunkle Stiftfarbe nehmen (schwarz oder blau). Leere Kästchen sind erlaubt.</li>
+          <li>Die Ecken-Quadrate und den Code unten nicht übermalen – daran erkennt die Seite, welche Zeichen drauf sind.</li>
+          <li>In GoodNotes <b>Teilen → Exportieren → PDF</b> und die Datei in Schritt 2 hochladen.</li>
+        </ol>
+        <p class="small muted" style="margin-top:12px">Lieber direkt hier schreiben? In Schritt 2 kannst du jedes Zeichen auch mit dem Apple Pencil im Browser zeichnen.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 HANDSCHRIFT -->
+  <section class="panel" id="p-schrift" hidden>
+    <div class="grid2">
+      <div class="card">
+        <h2>Ausgefüllte Vorlage hochladen</h2>
+        <p class="muted small">PDF-Export aus GoodNotes oder Bilder der Seiten (PNG/JPG). Reihenfolge egal, du kannst Seiten auch einzeln nachreichen.</p>
+        <label class="drop" id="drop">
+          <input type="file" id="file" accept="application/pdf,image/*" multiple>
+          <b>Datei auswählen</b>
+          <span class="small muted">oder hierher ziehen</span>
+        </label>
+        <div id="up-status" style="margin-top:12px"></div>
+      </div>
+      <div class="card">
+        <h2>Deine Schrift</h2>
+        <p class="muted small" id="lib-summary"></p>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="btn-export">Schrift sichern (.json)</button>
+          <label class="btn" style="position:relative">Sicherung laden<input type="file" id="import" accept=".json,application/json" style="position:absolute;opacity:0;inset:0;width:100%;cursor:pointer"></label>
+          <button class="btn danger" id="btn-clear">Alles löschen</button>
+        </div>
+        <div id="clear-confirm"></div>
+        <p class="small muted" style="margin-top:10px">Die Schrift bleibt in diesem Browser gespeichert. Mit der Sicherung kannst du sie auf ein anderes Gerät mitnehmen.</p>
+      </div>
+    </div>
+
+    <div class="card" id="draw-card">
+      <div class="drawhead">
+        <div class="bigchar" id="d-char">a</div>
+        <div style="flex:1;min-width:200px">
+          <h2 style="margin:0">Zeichnen &amp; korrigieren</h2>
+          <p class="muted small" style="margin:2px 0 0">Schreib das Zeichen in die Kästchen (Apple Pencil, Finger oder Maus). Mit × leerst du eine einzelne Variante.</p>
+        </div>
+        <div class="row">
+          <button class="btn" id="d-prev" aria-label="Vorheriges Zeichen">←</button>
+          <button class="btn" id="d-clear">Alle leeren</button>
+          <button class="btn primary" id="d-save">Speichern &amp; weiter →</button>
+        </div>
+      </div>
+      <div class="cells" id="cells"></div>
+      <div class="charpick" id="charpick"></div>
+    </div>
+
+    <div class="card">
+      <div class="libhead"><h2>Alle Zeichen</h2><span class="small muted">Tippen zum Bearbeiten</span></div>
+      <div id="lib" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- 3 SCHREIBEN -->
+  <section class="panel" id="p-schreiben" hidden>
+    <div id="demo-banner" class="banner" hidden>
+      <span><b>Beispielschrift aktiv.</b> Die Vorschau nutzt eine Muster-Handschrift, bis du deine eigene in Schritt 1–2 angelegt hast.</span>
+      <button class="btn" data-go="vorlage">Eigene Schrift anlegen</button>
+    </div>
+    <div class="write">
+      <div class="card">
+        <label class="field" for="text"><span>Text</span></label>
+        <textarea id="text" spellcheck="true"></textarea>
+        <div class="fields">
+          <div class="two">
+            <label class="field"><span>Format</span>
+              <select id="o-format">
+                <option value="a4p">A4 hoch</option><option value="a4l">A4 quer</option>
+                <option value="a5p">A5 hoch</option><option value="letter">US Letter</option>
+              </select></label>
+            <label class="field"><span>Papier</span>
+              <select id="o-paper">
+                <option value="lined">Liniert</option><option value="grid">Kariert</option>
+                <option value="dots">Punktraster</option><option value="blank">Blanko</option>
+              </select></label>
+          </div>
+          <label class="field"><span>Schriftgröße <output id="v-size"></output></span><input type="range" id="o-size" min="1.6" max="6" step="0.1"></label>
+          <label class="field"><span>Zeilenabstand <output id="v-line"></output></span><input type="range" id="o-line" min="5" max="14" step="0.1"></label>
+          <div class="two">
+            <label class="field"><span>Buchstaben <output id="v-ls"></output></span><input type="range" id="o-ls" min="-20" max="60" step="1"></label>
+            <label class="field"><span>Wörter <output id="v-ws"></output></span><input type="range" id="o-ws" min="40" max="200" step="5"></label>
+          </div>
+          <label class="field"><span>Natürliche Unruhe <output id="v-mess"></output></span><input type="range" id="o-mess" min="0" max="100" step="1"></label>
+          <label class="field"><span>Rand <output id="v-margin"></output></span><input type="range" id="o-margin" min="5" max="35" step="1"></label>
+          <div class="field"><span>Tinte</span>
+            <div class="inks" id="inks"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card sticky">
+        <div class="pvhead">
+          <h2 style="margin:0">Vorschau <span class="small muted" id="pv-info"></span></h2>
+          <div class="row">
+            <button class="btn" id="btn-shuffle">Neu mischen</button>
+            <button class="btn primary" id="btn-pdf">PDF für GoodNotes</button>
+          </div>
+        </div>
+        <div id="pdf-result"></div>
+        <p class="missing" id="missing" hidden></p>
+        <div class="pages" id="pages"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+"use strict";
+/* ---------- Geometrie (alles in mm) ---------- */
+const PX = 8;                 // Auflösung gespeicherter Glyphen: px pro mm
+const CW = 20.75, CH = 21.5;  // Kästchengröße
+const BASE = 14.5, XLINE = 8.5, XH = BASE - XLINE; // Grundlinie / x-Linie ab Kästchen-Oberkante
+const INSET = 0.9;
+const PAGE = {w:210, h:297};
+const MARKS = [[9,9],[201,9],[9,288],[201,288]];
+const GRID = {x:16, lab:12, y:22, rows:12};
+const CODE = {x:60, y:284.5, step:4.5, n:12};
+const SETS = [
+  {id:"lower", name:"Kleinbuchstaben", chars:[..."abcdefghijklmnopqrstuvwxyzäöüß"]},
+  {id:"upper", name:"Großbuchstaben", chars:[..."ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ"]},
+  {id:"digits", name:"Ziffern", chars:[..."0123456789"]},
+  {id:"punct", name:"Satzzeichen", chars:[...".,;:!?-()\"'"]},
+  {id:"special", name:"Sonderzeichen", chars:[..."/&+=%€@*#„“–_"]},
+];
+const ALL = SETS.flatMap(s => s.chars);
+const FORMATS = {a4p:[210,297], a4l:[297,210], a5p:[148,210], letter:[215.9,279.4]};
+const INKS = [["Schwarz","#1c1d22"],["Blau","#1d3a9e"],["Hellblau","#2f6fd6"],["Rot","#b8242c"],["Grün","#1f6e45"],["Bleistift","#5b6069"]];
+
+const $ = s => document.querySelector(s);
+const el = (tag, props={}, kids=[]) => { const e = Object.assign(document.createElement(tag), props); for (const k of [].concat(kids)) e.append(k); return e; };
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const tick = () => new Promise(r => setTimeout(r, 0));
+function toast(msg){ const t = el("div",{className:"toast",textContent:msg}); document.body.append(t); setTimeout(()=>t.remove(), 2600); }
+function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* ---------- Speicher ---------- */
+const DB = {
+  open(){ return new Promise((res,rej)=>{ const r = indexedDB.open("handschrift",1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async get(k){ try { const db = await this.open(); return await new Promise((res,rej)=>{ const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); } catch(e){ return null; } },
+  async set(k,v){ try { const db = await this.open(); await new Promise((res,rej)=>{ const tx = db.transaction("kv","readwrite"); tx.objectStore("kv").put(v,k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); } catch(e){ toast("Speichern im Browser nicht möglich – bitte Sicherung exportieren."); } }
+};
+const LS = { get(k,d){ try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } }, set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} } };
+
+let lib = {};      // eigene Schrift: Zeichen -> [Glyphe]
+let demo = null;   // Beispielschrift
+const imgCache = new WeakMap();
+const tintCache = new WeakMap();
+const activeLib = () => Object.keys(lib).length ? lib : (demo || {});
+async function saveLib(){ await DB.set("lib", lib); }
+
+function loadImg(g){
+  if (imgCache.has(g)) return imgCache.get(g);
+  const p = new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = g.src; });
+  imgCache.set(g, p); return p;
+}
+async function ensureImages(L){ const all = Object.values(L).flat(); const imgs = await Promise.all(all.map(loadImg)); all.forEach((g,i)=>{ g._img = imgs[i]; }); }
+
+/* ---------- Glyph aus Alpha-Maske ---------- */
+function glyphFromAlpha(a, w, h){
+  let n = 0, max = 0;
+  for (let i=0;i<a.length;i++){ const v = a[i]; if (v > .35) n++; if (v > max) max = v; }
+  if (n < 14) return null;
+  const k = max < .95 ? 1/max : 1;
+  let x1=w, y1=h, x2=-1, y2=-1;
+  for (let y=0;y<h;y++) for (let x=0;x<w;x++){ if (a[y*w+x]*k > .15){ if(x<x1)x1=x; if(x>x2)x2=x; if(y<y1)y1=y; if(y>y2)y2=y; } }
+  if (x2 < 0) return null;
+  x1 = Math.max(0,x1-2); y1 = Math.max(0,y1-2); x2 = Math.min(w-1,x2+2); y2 = Math.min(h-1,y2+2);
+  const bw = x2-x1+1, bh = y2-y1+1;
+  const c = el("canvas",{width:bw,height:bh}); const ctx = c.getContext("2d"); const id = ctx.createImageData(bw,bh);
+  for (let y=0;y<bh;y++) for (let x=0;x<bw;x++){ const v = Math.min(1, a[(y+y1)*w + x+x1]*k); id.data[(y*bw+x)*4+3] = Math.round(v*255); }
+  ctx.putImageData(id,0,0);
+  return {src:c.toDataURL("image/png"), w:bw/PX, h:bh/PX, x:x1/PX, y:y1/PX - BASE};
+}
+
+/* ---------- 1: Vorlage ---------- */
+const charsFor = mask => SETS.flatMap((s,i) => mask & (1<<i) ? s.chars : []);
+function selectedMask(){ return SETS.reduce((m,s,i) => $("#set-"+s.id).checked ? m | (1<<i) : m, 0); }
+
+function makeTemplate(mask){
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({unit:"mm", format:"a4"});
+  const chars = charsFor(mask), pages = Math.ceil(chars.length / GRID.rows);
+  for (let p=0;p<pages;p++){
+    if (p) doc.addPage();
+    doc.setFillColor(0,0,0); MARKS.forEach(([x,y]) => doc.rect(x-2.5,y-2.5,5,5,"F"));
+    doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(21,26,44); doc.text("Handschrift-Vorlage", 20, 13.2);
+    doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(105,112,132);
+    doc.text(`Seite ${p+1} von ${pages}  ·  Jedes Zeichen 8-mal schreiben: Grundlinie = dunkle Linie, gestrichelt = Höhe von x. Ecken und Code frei lassen.`, 20, 17.6);
+    for (let r=0;r<GRID.rows;r++){
+      const ch = chars[p*GRID.rows + r]; if (ch === undefined) break;
+      const y0 = GRID.y + r*CH;
+      doc.setFont("helvetica","normal"); doc.setFontSize(16); doc.setTextColor(110,117,138);
+      doc.text(ch, GRID.x + GRID.lab/2, y0 + BASE, {align:"center"});
+      for (let i=0;i<8;i++){
+        const x0 = GRID.x + GRID.lab + i*CW;
+        doc.setLineDashPattern([],0); doc.setDrawColor(222,226,233); doc.setLineWidth(.2); doc.rect(x0,y0,CW,CH);
+        doc.setDrawColor(196,213,234); doc.setLineWidth(.35); doc.line(x0+1.2, y0+BASE, x0+CW-1.2, y0+BASE);
+        doc.setLineDashPattern([.8,.8],0); doc.setDrawColor(214,226,240); doc.setLineWidth(.2); doc.line(x0+1.2, y0+XLINE, x0+CW-1.2, y0+XLINE);
+        doc.setLineDashPattern([],0);
+      }
+    }
+    const code = p | (mask<<6) | (1<<11);
+    for (let i=0;i<CODE.n;i++){
+      const x = CODE.x + i*CODE.step;
+      if (code>>i & 1){ doc.setFillColor(0,0,0); doc.rect(x,CODE.y,3,3,"F"); }
+      else { doc.setDrawColor(200,205,214); doc.setLineWidth(.2); doc.rect(x,CODE.y,3,3); }
+    }
+    doc.setFontSize(6); doc.setTextColor(150,156,172); doc.text("Erkennungscode – bitte frei lassen", CODE.x + CODE.n*CODE.step + 2, CODE.y + 2.3);
+  }
+  return doc.output("blob");
+}
+
+/* ---------- 2: Erkennung ---------- */
+async function fileToCanvases(f){
+  const out = [];
+  const targetW = PAGE.w * PX;
+  if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)){
+    const pdf = await pdfjsLib.getDocument({data: new Uint8Array(await f.arrayBuffer())}).promise;
+    for (let i=1;i<=pdf.numPages;i++){
+      const page = await pdf.getPage(i);
+      const v1 = page.getViewport({scale:1});
+      const vp = page.getViewport({scale: targetW / v1.width});
+      const c = el("canvas",{width:Math.round(vp.width), height:Math.round(vp.height)});
+      const ctx = c.getContext("2d",{willReadFrequently:true}); ctx.fillStyle = "#fff"; ctx.fillRect(0,0,c.width,c.height);
+      await page.render({canvasContext:ctx, viewport:vp}).promise;
+      out.push(c);
+    }
+  } else {
+    const url = URL.createObjectURL(f);
+    const img = await new Promise((res,rej)=>{ const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const s = targetW / img.naturalWidth;
+    const c = el("canvas",{width:Math.round(img.naturalWidth*s), height:Math.round(img.naturalHeight*s)});
+    const ctx = c.getContext("2d",{willReadFrequently:true}); ctx.fillStyle = "#fff"; ctx.fillRect(0,0,c.width,c.height);
+    ctx.drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
+    out.push(c);
+  }
+  return out;
+}
+
+function extractPage(cv, fallbackIdx, fallbackMask){
+  const W = cv.width, H = cv.height;
+  const d = cv.getContext("2d",{willReadFrequently:true}).getImageData(0,0,W,H).data;
+  const lum = new Float32Array(W*H);
+  for (let i=0,k=0;i<lum.length;i++,k+=4) lum[i] = .299*d[k] + .587*d[k+1] + .114*d[k+2];
+  const L = (x,y) => { if (x<0||y<0||x>=W-1||y>=H-1) return 255; const xi=x|0, yi=y|0, fx=x-xi, fy=y-yi, i=yi*W+xi;
+    return (lum[i]*(1-fx)+lum[i+1]*fx)*(1-fy) + (lum[i+W]*(1-fx)+lum[i+W+1]*fx)*fy; };
+  const sx = W/PAGE.w, sy = H/PAGE.h;
+  const boxes = [[0,0,17,20],[193,0,210,20],[0,277,17,297],[193,277,210,297]];
+  const expect = 25*sx*sy;
+  const found = boxes.map(([a,b,c,e]) => {
+    let n=0, cx=0, cy=0;
+    for (let y=Math.floor(b*sy); y<Math.min(H,e*sy); y++) for (let x=Math.floor(a*sx); x<Math.min(W,c*sx); x++){ if (lum[y*W+x] < 90){ n++; cx+=x; cy+=y; } }
+    return n > expect*.4 && n < expect*2.5 ? [cx/n, cy/n] : null;
+  });
+  const marksOk = found.every(Boolean);
+  const P = marksOk ? found : MARKS.map(([x,y]) => [x*sx, y*sy]);
+  const map = (xm, ym) => { const u = (xm-9)/192, v = (ym-9)/279;
+    return [ (1-u)*(1-v)*P[0][0] + u*(1-v)*P[1][0] + (1-u)*v*P[2][0] + u*v*P[3][0],
+             (1-u)*(1-v)*P[0][1] + u*(1-v)*P[1][1] + (1-u)*v*P[2][1] + u*v*P[3][1] ]; };
+  let code = 0;
+  for (let i=0;i<CODE.n;i++){
+    let s=0, n=0;
+    for (const dy of [-.6,0,.6]) for (const dx of [-.6,0,.6]){ const [x,y] = map(CODE.x + i*CODE.step + 1.5 + dx, CODE.y + 1.5 + dy); s += L(x,y); n++; }
+    if (s/n < 128) code |= 1<<i;
+  }
+  let pageIdx = code & 63, mask = code>>6 & 31, codeOk = (code>>11 & 1) && mask > 0 && pageIdx*GRID.rows < charsFor(mask).length;
+  if (!codeOk){ pageIdx = fallbackIdx; mask = fallbackMask; }
+  const chars = charsFor(mask);
+  const cw = Math.round(CW*PX), chh = Math.round(CH*PX), ins = Math.round(INSET*PX);
+  const result = {};
+  for (let r=0;r<GRID.rows;r++){
+    const ch = chars[pageIdx*GRID.rows + r]; if (ch === undefined) break;
+    const y0 = GRID.y + r*CH, vars = [];
+    for (let i=0;i<8;i++){
+      const x0 = GRID.x + GRID.lab + i*CW;
+      const a = new Float32Array(cw*chh);
+      for (let b=ins;b<chh-ins;b++) for (let q=ins;q<cw-ins;q++){
+        const [X,Y] = map(x0 + (q+.5)/PX, y0 + (b+.5)/PX);
+        a[b*cw+q] = clamp((205 - L(X,Y))/110, 0, 1);
+      }
+      const g = glyphFromAlpha(a, cw, chh); if (g) vars.push(g);
+    }
+    if (vars.length) result[ch] = vars;
+  }
+  return {pageIdx, codeOk, marksOk, result};
+}
+
+async function handleUpload(files){
+  const st = $("#up-status");
+  st.innerHTML = ""; const s = el("div",{className:"status"}); st.append(s);
+  s.innerHTML = '<span class="spin"></span> Seiten werden gelesen …';
+  try {
+    const canvases = [];
+    for (const f of files) canvases.push(...await fileToCanvases(f));
+    let chars = 0, vars = 0, warn = [];
+    const mask = selectedMask() || 31;
+    for (let i=0;i<canvases.length;i++){
+      s.innerHTML = `<span class="spin"></span> Seite ${i+1} von ${canvases.length} wird ausgewertet …`;
+      await tick();
+      const r = extractPage(canvases[i], i, mask);
+      if (!r.codeOk) warn.push(`Seite ${i+1}: Code nicht lesbar, Reihenfolge angenommen`);
+      else if (!r.marksOk) warn.push(`Seite ${i+1}: Ecken nicht gefunden, Standardposition genutzt`);
+      for (const [ch, v] of Object.entries(r.result)){ lib[ch] = v; chars++; vars += v.length; }
+    }
+    await saveLib(); renderLib(); renderPick(); loadDrawChar(curChar);
+    s.className = "status " + (warn.length ? "warn" : "ok");
+    s.textContent = `${canvases.length} Seite(n) gelesen · ${chars} Zeichen · ${vars} Varianten übernommen.` + (warn.length ? " " + warn.join(" · ") : "");
+    schedule();
+  } catch(e){
+    console.error(e); s.className = "status err";
+    s.textContent = "Die Datei ließ sich nicht lesen. Bitte als PDF oder PNG/JPG exportieren und erneut versuchen.";
+  }
+}
+
+/* ---------- Bibliothek-Anzeige ---------- */
+function renderLib(){
+  const box = $("#lib"); box.innerHTML = "";
+  let n = 0, v = 0;
+  for (const s of SETS){
+    const have = s.chars.filter(c => lib[c]?.length).length;
+    const sec = el("div",{className:"libsec"});
+    sec.append(el("div",{className:"libhead"},[el("h3",{textContent:s.name}), el("span",{className:"small muted",textContent:`${have} / ${s.chars.length}`})]));
+    const tiles = el("div",{className:"tiles"});
+    for (const c of s.chars){
+      const g = lib[c] || []; n += g.length ? 1 : 0; v += g.length;
+      const t = el("button",{className:"tile" + (g.length ? (g.length>=8 ? " full" : "") : " empty"), title:`„${c}“ bearbeiten`});
+      t.append(el("span",{className:"lab",textContent:c}));
+      if (g.length){ t.append(el("img",{src:g[0].src, alt:""})); t.append(el("span",{className:"cnt",textContent:`${g.length}/8`})); }
+      t.onclick = () => { loadDrawChar(c); $("#draw-card").scrollIntoView({behavior:"smooth", block:"start"}); };
+      tiles.append(t);
+    }
+    sec.append(tiles); box.append(sec);
+  }
+  $("#lib-summary").textContent = n ? `${n} von ${ALL.length} Zeichen angelegt, ${v} Varianten insgesamt.` : "Noch keine eigene Schrift gespeichert. Lade die ausgefüllte Vorlage hoch oder zeichne unten direkt.";
+  $("#demo-banner").hidden = !!n;
+}
+
+/* ---------- Zeichnen ---------- */
+const DPX = 16; let curChar = "a"; const cellCanvases = [];
+function buildCells(){
+  const box = $("#cells");
+  for (let i=0;i<8;i++){
+    const wrap = el("div",{className:"cell"});
+    const c = el("canvas",{width:Math.round(CW*DPX), height:Math.round(CH*DPX)});
+    const ctx = c.getContext("2d"); ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#16181f"; ctx.fillStyle = "#16181f";
+    let last = null, penSeen = false;
+    const pt = e => { const r = c.getBoundingClientRect(); return [(e.clientX-r.left)/r.width*c.width, (e.clientY-r.top)/r.height*c.height, e.pressure || .5]; };
+    const seg = (a,b) => { ctx.lineWidth = (0.32 + 0.5*b[2]) * DPX; ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); };
+    c.addEventListener("pointerdown", e => { if (e.pointerType === "pen") penSeen = true; if (penSeen && e.pointerType === "touch") return;
+      e.preventDefault(); c.setPointerCapture(e.pointerId); last = pt(e); seg(last,last); });
+    c.addEventListener("pointermove", e => { if (!last) return; const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+      for (const ev of (evs.length ? evs : [e])){ const p = pt(ev); seg(last,p); last = p; } });
+    const end = () => { last = null; };
+    c.addEventListener("pointerup", end); c.addEventListener("pointercancel", end);
+    const x = el("button",{className:"x", textContent:"×", title:"Variante leeren", type:"button"});
+    x.onclick = () => ctx.clearRect(0,0,c.width,c.height);
+    wrap.append(c, el("span",{className:"k",textContent:i+1}), x);
+    box.append(wrap); cellCanvases.push(c);
+  }
+}
+async function loadDrawChar(ch){
+  curChar = ch; $("#d-char").textContent = ch;
+  for (const c of cellCanvases) c.getContext("2d").clearRect(0,0,c.width,c.height);
+  const g = lib[ch] || [];
+  for (let i=0;i<Math.min(8,g.length);i++){
+    const img = await loadImg(g[i]); if (!img || curChar !== ch) continue;
+    cellCanvases[i].getContext("2d").drawImage(img, g[i].x*DPX, (BASE+g[i].y)*DPX, g[i].w*DPX, g[i].h*DPX);
+  }
+  renderPick();
+}
+async function saveDrawChar(){
+  const w = Math.round(CW*PX), h = Math.round(CH*PX), vars = [];
+  for (const c of cellCanvases){
+    const s = el("canvas",{width:w,height:h}); const sc = s.getContext("2d",{willReadFrequently:true});
+    sc.drawImage(c,0,0,w,h);
+    const d = sc.getImageData(0,0,w,h).data, a = new Float32Array(w*h);
+    for (let i=0;i<a.length;i++) a[i] = d[i*4+3]/255;
+    const g = glyphFromAlpha(a,w,h); if (g) vars.push(g);
+  }
+  if (vars.length) lib[curChar] = vars; else delete lib[curChar];
+  await saveLib(); renderLib(); schedule();
+  toast(vars.length ? `„${curChar}“ gespeichert (${vars.length} Varianten)` : `„${curChar}“ ist jetzt leer`);
+}
+function renderPick(){
+  const box = $("#charpick"); box.innerHTML = "";
+  for (const c of ALL){
+    const b = el("button",{textContent:c, type:"button", className:(lib[c]?.length ? "has" : "") + (c === curChar ? " cur" : ""), title:`„${c}“`});
+    b.onclick = () => loadDrawChar(c); box.append(b);
+  }
+}
+
+/* ---------- Beispielschrift ---------- */
+async function makeDemo(){
+  try { await document.fonts.load('60px "Caveat"'); } catch(e){}
+  const w = Math.round(CW*PX), h = Math.round(CH*PX);
+  const c = el("canvas",{width:w,height:h}); const ctx = c.getContext("2d",{willReadFrequently:true});
+  ctx.font = '100px "Caveat", cursive';
+  const xa = ctx.measureText("x").actualBoundingBoxAscent || 45;
+  const size = XH*PX*100/xa;
+  const rng = mulberry(7), out = {};
+  for (const ch of ALL){
+    out[ch] = [];
+    for (let v=0; v<8; v++){
+      ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,w,h);
+      const sk = (rng()-.5)*.16, sy = 1 + (rng()-.5)*.1, rot = (rng()-.5)*.06;
+      ctx.translate(4*PX, BASE*PX); ctx.rotate(rot); ctx.transform(1,0,-sk,sy,0,0);
+      ctx.font = `${size*(1+(rng()-.5)*.06)}px "Caveat", cursive`;
+      ctx.fillStyle = "#000"; ctx.strokeStyle = "#000"; ctx.lineWidth = rng()*1.2;
+      ctx.fillText(ch, 0, 0); if (ctx.lineWidth > .2) ctx.strokeText(ch, 0, 0);
+      const d = ctx.getImageData(0,0,w,h).data, a = new Float32Array(w*h);
+      for (let i=0;i<a.length;i++) a[i] = d[i*4+3]/255;
+      const g = glyphFromAlpha(a,w,h); if (g) out[ch].push(g);
+    }
+  }
+  return out;
+}
+
+/* ---------- 3: Satz ---------- */
+const ALT = {"„":'"',"“":'"',"”":'"',"«":'"',"»":'"',"‚":"'","‘":"'","’":"'","`":"'","–":"-","—":"-","…":"...","ß":"ss","€":"E","\t":" "};
+const UML = {"ä":"a","ö":"o","ü":"u","Ä":"A","Ö":"O","Ü":"U"};
+function opts(){
+  return {
+    format:$("#o-format").value, paper:$("#o-paper").value,
+    size:+$("#o-size").value, line:+$("#o-line").value, ls:+$("#o-ls").value, ws:+$("#o-ws").value,
+    mess:+$("#o-mess").value, margin:+$("#o-margin").value, ink:inkColor
+  };
+}
+function layout(text, o, L, seed){
+  const rng = mulberry(seed), J = () => rng()*2-1;
+  const [pw, ph] = FORMATS[o.format];
+  const s = o.size / XH, u = o.mess/100;
+  const left = o.margin, right = pw - Math.max(8, o.margin*.75), top = Math.max(12, o.margin), bottom = ph - Math.max(10, o.margin*.6);
+  const lsp = o.size * o.ls/100, wsp = o.size * o.ws/100;
+  const pages = [], missing = new Set(), lastVar = {};
+  let page, base, x, slope, lineLeft;
+  const newPage = () => { page = {items:[]}; pages.push(page); base = top + o.line; };
+  const newLine = (first) => {
+    if (!first) base += o.line;
+    if (!page || base > bottom) newPage();
+    lineLeft = left + Math.abs(J())*1.2*u; x = lineLeft; slope = J()*.008*u;
+  };
+  const pick = ch => { const v = L[ch]; let i = Math.floor(rng()*v.length); if (v.length > 1 && i === lastVar[ch]) i = (i+1) % v.length; lastVar[ch] = i; return v[i]; };
+  const resolve = ch => {
+    if (L[ch]?.length) return [{g:pick(ch)}];
+    if (UML[ch] && L[UML[ch]]?.length) return [{g:pick(UML[ch]), dots:true}];
+    const sw = ch === ch.toLowerCase() ? ch.toUpperCase() : ch.toLowerCase();
+    if (sw !== ch && L[sw]?.length) return [{g:pick(sw)}];
+    if (ALT[ch] !== undefined){ const r = [...ALT[ch]].flatMap(c => L[c]?.length ? [{g:pick(c)}] : []); if (r.length) return r; }
+    if (ch.trim()) missing.add(ch);
+    return [{gap:o.size*.7}];
+  };
+  newLine(true);
+  for (const para of text.replace(/\r/g,"").split("\n")){
+    const words = para.split(/ +/).filter(Boolean);
+    for (const word of words){
+      const parts = [...word].flatMap(resolve);
+      const sc = parts.map(() => 1 + J()*.05*u);
+      const widths = parts.map((p,i) => p.gap ? p.gap : p.g.w*s*sc[i] + lsp*(1 + J()*.25*u));
+      const total = widths.reduce((a,b)=>a+b, 0);
+      if (x > lineLeft && x + total > right) newLine();
+      parts.forEach((p,i) => {
+        if (x + widths[i] > right && x > lineLeft) newLine();
+        if (p.g){
+          const y = base + slope*(x-left) + J()*.22*u*o.size/3;
+          page.items.push({g:p.g, x, y, s:s*sc[i], rot:J()*.035*u, dots:p.dots});
+        }
+        x += widths[i];
+      });
+      x += wsp*(1 + J()*.3*u);
+    }
+    newLine();
+  }
+  if (pages.length > 1 && !pages[pages.length-1].items.length) pages.pop();
+  return {pages, missing, pw, ph};
+}
+function paperPrims(o, pw, ph){
+  const P = [], top = Math.max(12, o.margin);
+  if (o.paper === "lined"){
+    for (let y = top; y < ph - 6; y += o.line) P.push({t:"l", x1:0, y1:y, x2:pw, y2:y, c:"#b7c9e2", w:.2});
+    P.push({t:"l", x1:o.margin-4, y1:0, x2:o.margin-4, y2:ph, c:"#e4a6a6", w:.25});
+  } else if (o.paper === "grid"){
+    for (let y = 5; y < ph; y += 5) P.push({t:"l", x1:0, y1:y, x2:pw, y2:y, c:"#cdd8e6", w:.15});
+    for (let x = 5; x < pw; x += 5) P.push({t:"l", x1:x, y1:0, x2:x, y2:ph, c:"#cdd8e6", w:.15});
+  } else if (o.paper === "dots"){
+    for (let y = 5; y < ph; y += 5) for (let x = 5; x < pw; x += 5) P.push({t:"d", x, y, r:.28, c:"#b4bfcf"});
+  }
+  return P;
+}
+function tinted(g, color){
+  let m = tintCache.get(g); if (!m){ m = {}; tintCache.set(g, m); }
+  if (m[color]) return m[color];
+  const img = g._img; const c = el("canvas",{width:img.naturalWidth, height:img.naturalHeight}); const x = c.getContext("2d");
+  x.drawImage(img,0,0); x.globalCompositeOperation = "source-in"; x.fillStyle = color; x.fillRect(0,0,c.width,c.height);
+  return m[color] = c;
+}
+function drawInk(ctx, page, o){
+  for (const it of page.items){
+    if (!it.g._img) continue;
+    ctx.save(); ctx.translate(it.x, it.y); ctx.rotate(it.rot);
+    ctx.drawImage(tinted(it.g, o.ink), 0, it.g.y*it.s, it.g.w*it.s, it.g.h*it.s);
+    if (it.dots){
+      ctx.fillStyle = o.ink; const r = o.size*.07, cx = it.g.w*it.s/2, cy = -o.size*1.35;
+      for (const dx of [-.22,.22]){ ctx.beginPath(); ctx.arc(cx + dx*o.size, cy, r, 0, 7); ctx.fill(); }
+    }
+    ctx.restore();
+  }
+}
+function drawPaper(ctx, prims){
+  for (const p of prims){
+    if (p.t === "l"){ ctx.strokeStyle = p.c; ctx.lineWidth = p.w; ctx.beginPath(); ctx.moveTo(p.x1,p.y1); ctx.lineTo(p.x2,p.y2); ctx.stroke(); }
+    else { ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill(); }
+  }
+}
+
+let seed = LS.get("hs-seed", 12345), inkColor = LS.get("hs-ink", INKS[1][1]), renderTimer = null, lastLayout = null;
+function schedule(){ clearTimeout(renderTimer); renderTimer = setTimeout(renderPreview, 180); }
+async function renderPreview(){
+  const L = activeLib(); await ensureImages(L);
+  const o = opts(), text = $("#text").value;
+  LS.set("hs-text", text); LS.set("hs-opts", o);
+  const res = layout(text, o, L, seed); lastLayout = {res, o, text};
+  const box = $("#pages"), prims = paperPrims(o, res.pw, res.ph);
+  const cssW = Math.min(640, box.clientWidth || 640), pxmm = cssW / res.pw * Math.min(2, window.devicePixelRatio || 1);
+  while (box.children.length > res.pages.length) box.lastChild.remove();
+  res.pages.forEach((pg,i) => {
+    let c = box.children[i]; if (!c){ c = el("canvas"); box.append(c); }
+    c.width = Math.round(res.pw*pxmm); c.height = Math.round(res.ph*pxmm);
+    c.setAttribute("aria-label", `Seite ${i+1}`);
+    const ctx = c.getContext("2d"); ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle = "#fff"; ctx.fillRect(0,0,c.width,c.height);
+    ctx.scale(pxmm,pxmm); drawPaper(ctx, prims); drawInk(ctx, pg, o);
+  });
+  $("#pv-info").textContent = `· ${res.pages.length} Seite${res.pages.length>1?"n":""}`;
+  const m = $("#missing");
+  m.hidden = !res.missing.size;
+  m.textContent = res.missing.size ? `Fehlende Zeichen (werden ausgelassen): ${[...res.missing].join(" ")}` : "";
+  $("#pdf-result").innerHTML = "";
+}
+
+async function buildPdf(){
+  const {res, o} = lastLayout; const {jsPDF} = window.jspdf;
+  const fmt = [res.pw, res.ph], orient = res.pw > res.ph ? "l" : "p";
+  const doc = new jsPDF({unit:"mm", format:fmt, orientation:orient, compress:true});
+  const prims = paperPrims(o, res.pw, res.ph), pxmm = 12;
+  for (let i=0;i<res.pages.length;i++){
+    if (i) doc.addPage(fmt, orient);
+    for (const p of prims){
+      if (p.t === "l"){ doc.setDrawColor(p.c); doc.setLineWidth(p.w); doc.line(p.x1,p.y1,p.x2,p.y2); }
+      else { doc.setFillColor(p.c); doc.circle(p.x,p.y,p.r,"F"); }
+    }
+    const c = el("canvas",{width:Math.round(res.pw*pxmm), height:Math.round(res.ph*pxmm)});
+    const ctx = c.getContext("2d"); ctx.scale(pxmm,pxmm); drawInk(ctx, res.pages[i], o);
+    doc.addImage(c.toDataURL("image/png"), "PNG", 0, 0, res.pw, res.ph, undefined, "FAST");
+    await tick();
+  }
+  doc.setProperties({title:"Handschrift", creator:"Handschrift-Studio"});
+  return doc.output("blob");
+}
+
+/* ---------- Dateien ausgeben ---------- */
+let dl = null;
+(async () => { try { dl = await window.claude?.use?.("downloads"); } catch(e){ dl = null; } })();
+function offerFile(container, blob, name, label){
+  container.innerHTML = "";
+  const file = new File([blob], name, {type: blob.type || "application/pdf"});
+  const box = el("div",{className:"result"});
+  const kb = Math.max(1, Math.round(blob.size/1024));
+  box.append(el("div",{className:"small"},[el("b",{textContent:name}), document.createTextNode(` · ${kb > 1024 ? (kb/1024).toFixed(1)+" MB" : kb+" KB"} · ${label}`)]));
+  const row = el("div",{className:"row"});
+  if (dl){
+    const b = el("button",{className:"btn primary",textContent:"Speichern / Teilen"});
+    b.onclick = async () => { try { await dl.save({filename:name, data:blob}); toast("Datei übergeben"); } catch(e){ if (e?.code !== "declined") toast("Speichern war hier nicht möglich."); } };
+    row.append(b);
+  } else {
+    if (navigator.canShare && navigator.canShare({files:[file]})){
+      const b = el("button",{className:"btn primary",textContent:"Teilen → GoodNotes"});
+      b.onclick = async () => { try { await navigator.share({files:[file]}); } catch(e){} };
+      row.append(b);
+    }
+    const url = URL.createObjectURL(blob);
+    row.append(el("a",{className:"btn",href:url,download:name,textContent:"Herunterladen"}));
+  }
+  box.append(row); container.append(box);
+}
+
+/* ---------- Oberfläche ---------- */
+function showTab(id){
+  for (const b of document.querySelectorAll("nav.steps button")){ const on = b.dataset.tab === id; b.setAttribute("aria-selected", on); }
+  for (const p of ["vorlage","schrift","schreiben"]) $("#p-"+p).hidden = p !== id;
+  try { if (location.hash !== "#"+id) history.replaceState(null, "", "#"+id); } catch(e){}
+  if (id === "schreiben") schedule();
+}
+function initUI(){
+  document.querySelectorAll("nav.steps button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => showTab(b.dataset.go));
+  // Sets
+  const sets = $("#sets"), savedMask = LS.get("hs-mask", 31);
+  SETS.forEach((s,i) => {
+    const cb = el("input",{type:"checkbox", id:"set-"+s.id, checked: !!(savedMask & (1<<i))});
+    cb.onchange = updTpl;
+    sets.append(el("label",{},[cb, el("span",{textContent:`${s.name} (${s.chars.length})`}), el("span",{className:"chars",textContent:s.chars.join("")})]));
+  });
+  function updTpl(){ const m = selectedMask(); LS.set("hs-mask", m); const n = charsFor(m).length;
+    $("#tpl-info").textContent = n ? `${n} Zeichen · ${n*8} Kästchen · ${Math.ceil(n/GRID.rows)} Seiten` : "Bitte mindestens eine Gruppe wählen";
+    $("#btn-template").disabled = !n; }
+  updTpl();
+  $("#btn-template").onclick = async () => {
+    const b = $("#btn-template"); b.disabled = true;
+    try { const blob = makeTemplate(selectedMask()); offerFile($("#tpl-result"), blob, "Handschrift-Vorlage.pdf", "in GoodNotes importieren"); }
+    finally { b.disabled = false; }
+  };
+  // Upload
+  const drop = $("#drop"), fi = $("#file");
+  fi.onchange = () => { if (fi.files.length) handleUpload([...fi.files]); fi.value = ""; };
+  drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); if (e.dataTransfer.files.length) handleUpload([...e.dataTransfer.files]); });
+  // Sicherung
+  $("#btn-export").onclick = () => {
+    if (!Object.keys(lib).length){ toast("Noch keine eigene Schrift zum Sichern."); return; }
+    const blob = new Blob([JSON.stringify({app:"handschrift-studio", version:1, glyphs:lib})], {type:"application/json"});
+    offerFile($("#clear-confirm"), blob, "meine-handschrift.json", "Sicherung");
+  };
+  $("#import").onchange = async e => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    try { const j = JSON.parse(await f.text()); if (!j.glyphs) throw 0; lib = j.glyphs; await saveLib(); renderLib(); loadDrawChar(curChar); schedule(); toast("Sicherung geladen"); }
+    catch(err){ toast("Das ist keine gültige Handschrift-Sicherung."); }
+  };
+  $("#btn-clear").onclick = () => {
+    const box = $("#clear-confirm"); box.innerHTML = "";
+    const r = el("div",{className:"result"});
+    r.append(el("span",{className:"small",textContent:"Wirklich die komplette eigene Schrift löschen? Das lässt sich nicht rückgängig machen."}));
+    const yes = el("button",{className:"btn danger",textContent:"Ja, löschen"}), no = el("button",{className:"btn",textContent:"Abbrechen"});
+    yes.onclick = async () => { lib = {}; await saveLib(); renderLib(); loadDrawChar(curChar); schedule(); box.innerHTML = ""; toast("Schrift gelöscht"); };
+    no.onclick = () => box.innerHTML = "";
+    r.append(el("div",{className:"row"},[yes,no])); box.append(r);
+  };
+  // Zeichnen
+  buildCells();
+  $("#d-clear").onclick = () => cellCanvases.forEach(c => c.getContext("2d").clearRect(0,0,c.width,c.height));
+  $("#d-save").onclick = async () => { await saveDrawChar(); const i = ALL.indexOf(curChar); loadDrawChar(ALL[(i+1) % ALL.length]); };
+  $("#d-prev").onclick = () => { const i = ALL.indexOf(curChar); loadDrawChar(ALL[(i-1+ALL.length) % ALL.length]); };
+  // Schreiben
+  const def = {format:"a4p", paper:"lined", size:2.9, line:8, ls:3, ws:85, mess:45, margin:20};
+  const o = Object.assign({}, def, LS.get("hs-opts", {}));
+  for (const k of ["format","paper","size","line","ls","ws","mess","margin"]) $("#o-"+k).value = o[k];
+  $("#text").value = LS.get("hs-text", "Liebe Lena,\n\nvielen Dank für die Unterlagen aus der Vorlesung! Ich habe mir die Zusammenfassung zu Kapitel 4 schon angeschaut – die Grafik zur Zellatmung ist super erklärt.\n\nKönnen wir uns am Donnerstag um 14:30 Uhr in der Bibliothek treffen? Dann gehen wir die Übungsaufgaben 3 bis 7 gemeinsam durch.\n\nViele Grüße und bis bald!");
+  const fmt = {size:v=>`${(+v).toFixed(1)} mm`, line:v=>`${(+v).toFixed(1)} mm`, ls:v=>`${v} %`, ws:v=>`${v} %`, mess:v=>`${v} %`, margin:v=>`${v} mm`};
+  for (const k in fmt){ const i = $("#o-"+k), out = $("#v-"+k); const upd = () => out.textContent = fmt[k](i.value); upd(); i.addEventListener("input", () => { upd(); schedule(); }); }
+  for (const k of ["format","paper"]) $("#o-"+k).addEventListener("change", schedule);
+  $("#text").addEventListener("input", schedule);
+  const inks = $("#inks");
+  const custom = el("input",{type:"color", value:inkColor, title:"Eigene Farbe", id:"o-inkcustom"});
+  const setInk = c => { inkColor = c; LS.set("hs-ink", c); inks.querySelectorAll(".ink").forEach(b => b.setAttribute("aria-pressed", b.dataset.c === c)); schedule(); };
+  INKS.forEach(([n,c]) => { const b = el("button",{className:"ink", title:n, type:"button"}); b.dataset.c = c; b.style.background = c; b.setAttribute("aria-label", n); b.onclick = () => { custom.value = c; setInk(c); }; inks.append(b); });
+  custom.oninput = () => setInk(custom.value); inks.append(custom); setInk(inkColor);
+  $("#btn-shuffle").onclick = () => { seed = (seed * 1103515245 + 12345) >>> 0; LS.set("hs-seed", seed); schedule(); };
+  $("#btn-pdf").onclick = async () => {
+    const b = $("#btn-pdf"), box = $("#pdf-result");
+    if (!lastLayout) await renderPreview();
+    b.disabled = true; box.innerHTML = '<div class="result small"><span><span class="spin"></span> PDF wird erstellt …</span></div>';
+    try { const blob = await buildPdf(); offerFile(box, blob, "Handschrift.pdf", `${lastLayout.res.pages.length} Seite(n)` + (Object.keys(lib).length ? "" : " · Beispielschrift")); }
+    catch(e){ console.error(e); box.innerHTML = ""; box.append(el("div",{className:"status err",textContent:"PDF konnte nicht erstellt werden. Bitte kürzeren Text versuchen."})); }
+    finally { b.disabled = false; }
+  };
+  window.addEventListener("resize", schedule);
+}
+
+(async function main(){
+  initUI();
+  const stored = await DB.get("lib"); if (stored && typeof stored === "object") lib = stored;
+  renderLib(); loadDrawChar("a");
+  const h = (location.hash || "").slice(1);
+  showTab(["vorlage","schrift","schreiben"].includes(h) ? h : "schreiben");
+  if (!Object.keys(lib).length){ demo = await makeDemo(); }
+  schedule();
+})();
+window.HS = {makeTemplate, extractPage, fileToCanvases, handleUpload, get lib(){ return lib; }, buildPdf, renderPreview, charsFor};
+</script>
+<!--APP-END-->
+</body>
+</html>
