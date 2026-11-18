@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Handschrift">
 </head>
 <body>
@@ -12,268 +13,251 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
 <style>
-/* Layout: Kopf + drei Arbeitsschritte als Reiter; Schritt 3 = Einstellungen links, Seitenvorschau rechts (stapelt auf schmalen Geräten). */
+/* iOS-Gruppenlisten auf grauem Grund, große Titel, Tab-Leiste unten. Einziges Ausdrucksmittel: die handgeschriebene Seite. */
 :root{
-  --bg:#f4f5f9; --surface:#ffffff; --surface2:#eef0f6; --line:#dce0ea; --fg:#151a2c; --muted:#5a6177;
-  --accent:#2a43a6; --accent-fg:#ffffff; --accent-weak:#e6eafa; --ok:#1d7a4b; --warn:#a0620b; --danger:#b3242f;
-  --paper:#ffffff; --guide:#c4d5ea; --guide2:#dfe8f4; --shadow:0 1px 2px rgba(21,26,44,.06),0 8px 24px rgba(21,26,44,.07);
-  --f-display:"Space Grotesk",ui-sans-serif,system-ui,sans-serif;
-  --f-body:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-hand:"Caveat","Bradley Hand","Segoe Print",cursive;
+  --bg:#f2f2f7; --card:#ffffff; --label:#000000; --label2:#6c6c70; --label3:#aeaeb2;
+  --sep:rgba(60,60,67,.22); --fill:rgba(120,120,128,.12); --fill2:rgba(118,118,128,.18);
+  --blue:#007aff; --green:#248a3d; --red:#d70015; --orange:#c93400; --bar:rgba(249,249,249,.92);
+  --paper-shadow:0 1px 3px rgba(0,0,0,.08),0 6px 20px rgba(0,0,0,.08);
+  --sys:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --sys-display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --hand:"Caveat","Bradley Hand","Segoe Print",cursive;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0e111a; --surface:#161a26; --surface2:#1d2231; --line:#2a3043; --fg:#e7eaf3; --muted:#9aa2b9;
-  --accent:#93a6ff; --accent-fg:#0e111a; --accent-weak:#1f2744; --ok:#5fcf95; --warn:#e8b35a; --danger:#ff7b84;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); color-scheme:dark}}
+  --bg:#000000; --card:#1c1c1e; --label:#ffffff; --label2:#98989f; --label3:#636366;
+  --sep:rgba(84,84,88,.55); --fill:rgba(120,120,128,.24); --fill2:rgba(118,118,128,.3);
+  --blue:#0a84ff; --green:#30d158; --red:#ff453a; --orange:#ff9f0a; --bar:rgba(22,22,24,.9);
+  --paper-shadow:0 0 0 1px rgba(255,255,255,.06); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0e111a; --surface:#161a26; --surface2:#1d2231; --line:#2a3043; --fg:#e7eaf3; --muted:#9aa2b9;
-  --accent:#93a6ff; --accent-fg:#0e111a; --accent-weak:#1f2744; --ok:#5fcf95; --warn:#e8b35a; --danger:#ff7b84;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); color-scheme:dark}
-*{box-sizing:border-box}
+  --bg:#000000; --card:#1c1c1e; --label:#ffffff; --label2:#98989f; --label3:#636366;
+  --sep:rgba(84,84,88,.55); --fill:rgba(120,120,128,.24); --fill2:rgba(118,118,128,.3);
+  --blue:#0a84ff; --green:#30d158; --red:#ff453a; --orange:#ff9f0a; --bar:rgba(22,22,24,.9);
+  --paper-shadow:0 0 0 1px rgba(255,255,255,.06); color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
 html,body{margin:0}
-body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+body{background:var(--bg);color:var(--label);font:17px/1.35 var(--sys);-webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 calc(96px + env(safe-area-inset-bottom,0px))}
 button,input,textarea,select{font:inherit;color:inherit}
-.wrap{max-width:1180px;margin:0 auto}
-header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-block:28px 18px}
-.brand h1{font:700 28px/1.1 var(--f-display);letter-spacing:-.01em;margin:0;text-wrap:balance}
-.brand p{margin:6px 0 0;color:var(--muted);max-width:60ch}
-.brand .hand{font-family:var(--f-hand);font-size:1.35em;color:var(--accent);font-weight:500}
-nav.steps{display:flex;gap:6px;background:var(--surface2);padding:5px;border-radius:12px;flex-wrap:wrap}
-nav.steps button{border:0;background:transparent;padding:9px 14px;border-radius:9px;cursor:pointer;color:var(--muted);font-weight:500;display:flex;gap:8px;align-items:center}
-nav.steps button .n{font:600 12px/1 var(--f-display);width:20px;height:20px;border-radius:50%;display:grid;place-items:center;border:1.5px solid currentColor}
-nav.steps button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:var(--shadow)}
-nav.steps button[aria-selected="true"] .n{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
-button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
-.panel{display:grid;gap:18px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;min-width:0}
-.card h2{font:600 18px/1.25 var(--f-display);margin:0 0 6px}
-.card h3{font:600 14px/1.3 var(--f-display);margin:0 0 8px;letter-spacing:.02em}
-.muted{color:var(--muted)}
-.small{font-size:13px}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:18px}
-.btn{border:1px solid var(--line);background:var(--surface);padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:500;display:inline-flex;gap:8px;align-items:center;justify-content:center}
-.btn:hover{background:var(--surface2)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
-.btn.primary:hover{filter:brightness(1.08)}
-.btn.ghost{border-color:transparent;background:transparent;color:var(--accent);padding-inline:8px}
-.btn.danger{color:var(--danger)}
-.btn:disabled{opacity:.5;cursor:default}
-ol.howto{margin:8px 0 0;padding-left:20px;display:grid;gap:6px}
-ol.howto li::marker{font-family:var(--f-display);font-weight:600;color:var(--accent)}
-.checks{display:grid;gap:8px;margin:12px 0 16px}
-.checks label{min-width:0;display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer}
-.checks label .chars{font-family:var(--f-hand);font-size:19px;color:var(--muted);margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48%;min-width:0}
-.checks input{accent-color:var(--accent);width:18px;height:18px}
-.drop{border:2px dashed var(--line);border-radius:14px;padding:28px 18px;text-align:center;display:grid;gap:10px;justify-items:center;cursor:pointer;background:var(--surface2)}
-.drop.over{border-color:var(--accent);background:var(--accent-weak)}
-.drop input{position:absolute;opacity:0;width:1px;height:1px}
-.status{font-size:14px;padding:10px 12px;border-radius:10px;background:var(--surface2)}
-.status.ok{color:var(--ok)} .status.warn{color:var(--warn)} .status.err{color:var(--danger)}
-.banner{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 14px;border-radius:12px;background:var(--accent-weak);color:var(--fg)}
-.banner b{font-family:var(--f-display)}
+button{cursor:pointer}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--blue) 55%,transparent);outline-offset:2px;border-radius:10px}
+.view{max-width:720px;margin:0 auto}
+.view.wide{max-width:1180px}
+h1.large{font:700 34px/1.12 var(--sys-display);letter-spacing:.01em;margin:28px 4px 6px;text-wrap:balance}
+.lead{color:var(--label2);margin:0 4px 22px;max-width:56ch}
+.group-title{font-size:13px;font-weight:400;color:var(--label2);text-transform:uppercase;letter-spacing:.02em;margin:26px 16px 7px}
+.footnote{font-size:13px;color:var(--label2);margin:7px 16px 0}
+.group{background:var(--card);border-radius:12px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:11px 16px;min-height:48px;position:relative;width:100%;text-align:left;background:none;border:0}
+.row + .row::before,.group > .row ~ .row::before{content:"";position:absolute;top:0;left:16px;right:0;border-top:.5px solid var(--sep)}
+.row.indent + .row::before{left:60px}
+.row .grow{flex:1;min-width:0}
+.row .t{display:block}
+.row .s{display:block;font-size:15px;color:var(--label2)}
+.row .val{color:var(--label2);font-variant-numeric:tabular-nums}
+.row.stack{flex-direction:column;align-items:stretch;gap:10px}
+.row.stack .head{display:flex;justify-content:space-between}
+button.row:active,label.row:active{background:var(--fill)}
+.row.link{color:var(--blue)} .row.danger{color:var(--red)}
+.num{width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;font:600 15px/30px var(--sys);text-align:center;flex:none}
+.chev{color:var(--label3);font-size:22px;font-weight:500;line-height:1}
+/* Schalter */
+.switch{appearance:none;-webkit-appearance:none;width:51px;height:31px;border-radius:16px;background:var(--fill2);position:relative;flex:none;margin:0;cursor:pointer;transition:background .2s}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.16);transition:transform .2s}
+.switch:checked{background:#34c759}
+.switch:checked::after{transform:translateX(20px)}
+.chars{font-family:var(--hand);font-size:20px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;line-height:1.1}
+/* Buttons */
+.btn-filled{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:50px;border:0;border-radius:12px;background:var(--blue);color:#fff;font-weight:600;font-size:17px;padding:0 20px}
+.btn-filled:active{opacity:.75}
+.btn-filled:disabled{opacity:.4}
+.btn-tinted{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;border:0;border-radius:18px;background:color-mix(in srgb,var(--blue) 15%,transparent);color:var(--blue);font-weight:600;font-size:15px;padding:0 14px}
+.mt{margin-top:16px}
+/* Upload */
+.upload{display:grid;justify-items:center;gap:6px;padding:30px 20px;background:var(--card);border-radius:12px;cursor:pointer;text-align:center;position:relative;border:2px dashed transparent}
+.upload.over{border-color:var(--blue)}
+.upload input{position:absolute;opacity:0;width:1px;height:1px}
+.upload svg{width:44px;height:44px;color:var(--blue)}
+.upload b{font-weight:600}
+.upload span{font-size:15px;color:var(--label2)}
+.status{margin-top:12px;padding:12px 16px;border-radius:12px;background:var(--card);font-size:15px;display:flex;gap:10px;align-items:center}
+.status.ok{color:var(--green)} .status.warn{color:var(--orange)} .status.err{color:var(--red)}
+.result{margin-top:12px;padding:14px 16px;border-radius:12px;background:var(--card);display:grid;gap:12px}
+.result .meta{font-size:15px;color:var(--label2)}
+.result .meta b{color:var(--label);font-weight:600}
+.result .acts{display:flex;gap:10px;flex-wrap:wrap}
+.result .acts > *{flex:1;min-width:150px;text-decoration:none}
+.btn-gray{display:flex;align-items:center;justify-content:center;min-height:50px;border-radius:12px;background:var(--fill);color:var(--blue);font-weight:600;border:0}
 /* Bibliothek */
-.libsec{display:grid;gap:10px}
-.libsec + .libsec{margin-top:18px}
-.libhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}
-.tile{position:relative;border:1px solid var(--line);border-radius:10px;background:var(--paper);aspect-ratio:1/1.1;max-width:100%;cursor:pointer;padding:0;overflow:hidden;display:grid;place-items:center}
-.tile img{max-width:70%;max-height:62%;object-fit:contain}
-.tile .lab{position:absolute;left:6px;top:3px;font:600 12px/1.2 var(--f-display);color:#7a8199}
-.tile .cnt{position:absolute;right:5px;bottom:3px;font:600 11px/1.2 var(--f-body);font-variant-numeric:tabular-nums;color:#7a8199}
-.tile.full .cnt{color:#1d7a4b}
-.tile.empty{background:var(--surface2)}
-.tile.empty .lab{font-size:20px;left:0;right:0;top:0;bottom:0;display:grid;place-items:center;color:var(--muted);opacity:.6}
-/* Zeichnen */
-.drawhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.bigchar{font:600 40px/1 var(--f-display);width:64px;height:64px;border-radius:12px;background:var(--accent-weak);display:grid;place-items:center;color:var(--accent)}
-.cells{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
-@media (max-width:620px){.cells{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.cell{position:relative;border:1px solid #d6dbe6;border-radius:8px;overflow:hidden;background:
-  linear-gradient(to bottom,transparent calc(67.44% - 1px),#b3c7e3 calc(67.44% - 1px),#b3c7e3 calc(67.44% + 1px),transparent calc(67.44% + 1px)),
-  linear-gradient(to bottom,transparent calc(39.53% - .5px),#d8e3f2 calc(39.53% - .5px),#d8e3f2 calc(39.53% + .5px),transparent calc(39.53% + .5px)),#fff;
-  aspect-ratio:20.75/21.5;max-width:100%}
-.cell canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
-.cell .x{position:absolute;right:4px;top:4px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(21,26,44,.07);color:#5a6177;cursor:pointer;font-size:16px;line-height:1}
-.cell .k{position:absolute;left:7px;top:4px;font:600 11px var(--f-display);color:#9aa3ba}
-.charpick{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px}
-.charpick button{min-width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font:500 15px var(--f-display);position:relative}
-.charpick button.has{border-color:var(--ok)}
-.charpick button.cur{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:6px;padding:12px}
+.tile{position:relative;border-radius:9px;background:#fff;aspect-ratio:1/1.1;max-width:100%;display:grid;place-items:center;overflow:hidden;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.12)}
+.tile img{max-width:72%;max-height:64%;object-fit:contain}
+.tile .cnt{position:absolute;right:4px;bottom:2px;font-size:10px;color:#8e8e93;font-variant-numeric:tabular-nums}
+.tile.empty{background:var(--fill);box-shadow:none}
+.tile.empty span{font-size:17px;color:var(--label3)}
+.lib-sub{font-size:13px;color:var(--label2);padding:12px 16px 0;text-transform:uppercase;letter-spacing:.02em}
 /* Schreiben */
-.write{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:18px;align-items:start}
+.write{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:24px;align-items:start}
 @media (max-width:900px){.write{grid-template-columns:minmax(0,1fr)}}
-textarea#text{width:100%;min-height:200px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);line-height:1.5}
-.fields{display:grid;gap:12px;margin-top:14px}
-.field{display:grid;gap:5px}
-.field > span{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between}
-.field > span output{font-variant-numeric:tabular-nums;text-transform:none;letter-spacing:0;color:var(--fg);font-weight:500}
-.field input[type=range]{width:100%;accent-color:var(--accent)}
-.field select{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:var(--surface)}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.inks{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.ink{width:32px;height:32px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
-.ink[aria-pressed="true"]{box-shadow:0 0 0 2px var(--accent)}
-.inks input[type=color]{width:36px;height:32px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--surface)}
-.sticky{position:sticky;top:max(12px,env(safe-area-inset-top,0px))}
-.pages{display:grid;gap:16px;justify-items:center}
-.pages canvas{width:100%;max-width:640px;height:auto;background:#fff;border-radius:4px;box-shadow:var(--shadow)}
-.pvhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-.missing{font-size:13px;color:var(--warn)}
-.result{display:grid;gap:10px;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);margin-top:12px}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:500;z-index:20;max-width:calc(100vw - 32px)}
-.spin{width:16px;height:16px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:sp .8s linear infinite;display:inline-block}
+textarea#text{display:block;width:100%;min-height:190px;resize:vertical;border:0;background:var(--card);padding:14px 16px;line-height:1.45;border-radius:12px}
+textarea#text:focus{outline:none}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--fill);border-radius:9px;padding:2px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:7px;padding:6px 4px;font-size:14px;font-weight:500;min-height:32px}
+.seg button[aria-checked="true"]{background:var(--card);box-shadow:0 3px 8px rgba(0,0,0,.12),0 1px 1px rgba(0,0,0,.04)}
+input[type=range]{width:100%;accent-color:var(--blue)}
+select.plain{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:var(--label2);text-align:right;padding:0 2px;font-size:17px;cursor:pointer}
+.inks{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.ink{width:30px;height:30px;border-radius:50%;border:0;padding:0;box-shadow:0 0 0 2px var(--card),0 0 0 3.5px transparent}
+.ink[aria-pressed="true"]{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--label3)}
+details.more summary{list-style:none;cursor:pointer}
+details.more summary::-webkit-details-marker{display:none}
+details.more summary .chev{transition:transform .2s}
+details.more[open] summary .chev{transform:rotate(90deg)}
+.preview{position:sticky;top:max(12px,env(safe-area-inset-top,0px));padding-top:28px}
+.pvhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 4px 14px}
+.pvhead h2{font:600 22px/1.2 var(--sys-display);margin:0}
+.pvhead .s{font-size:15px;color:var(--label2);font-weight:400}
+.pages{display:grid;gap:18px;justify-items:center}
+.pages canvas{width:100%;max-width:620px;height:auto;background:#fff;border-radius:3px;box-shadow:var(--paper-shadow)}
+.missing{font-size:15px;color:var(--orange);margin:0 4px 12px}
+.banner{display:flex;gap:12px;align-items:center;padding:12px 16px;border-radius:12px;background:var(--card);margin-bottom:6px}
+.banner .dot{width:8px;height:8px;border-radius:50%;background:var(--orange);flex:none}
+.banner .grow{flex:1;font-size:15px;color:var(--label2)}
+.banner .grow b{color:var(--label);font-weight:600}
+/* Tab-Leiste */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--bar);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+  border-top:.5px solid var(--sep);display:flex;justify-content:center;
+  padding:6px max(16px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.tabbar .in{display:flex;width:100%;max-width:520px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;color:#8e8e93;font-size:10px;font-weight:500;padding:4px 0;min-height:48px}
+.tab svg{width:26px;height:26px}
+.tab[aria-selected="true"]{color:var(--blue)}
+@media (prefers-reduced-transparency:reduce){.tabbar{background:var(--card);backdrop-filter:none;-webkit-backdrop-filter:none}}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:rgba(30,30,32,.92);color:#fff;padding:10px 18px;border-radius:20px;font-size:15px;font-weight:500;z-index:20;max-width:calc(100vw - 32px)}
+.spin{width:18px;height:18px;border-radius:50%;border:2px solid var(--label3);border-top-color:var(--label2);animation:sp .8s linear infinite;display:inline-block;flex:none}
 @keyframes sp{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){.spin{animation-duration:3s}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:3s}.switch,.switch::after{transition:none}}
 </style>
 
-<div class="wrap">
-  <header class="top">
-    <div class="brand">
-      <h1>Handschrift-Studio</h1>
-      <p>Text rein, <span class="hand">deine Handschrift</span> raus – als PDF, das du direkt in GoodNotes öffnest.</p>
-    </div>
-    <nav class="steps" role="tablist" aria-label="Arbeitsschritte">
-      <button role="tab" id="tab-vorlage" data-tab="vorlage"><span class="n">1</span>Vorlage</button>
-      <button role="tab" id="tab-schrift" data-tab="schrift"><span class="n">2</span>Handschrift</button>
-      <button role="tab" id="tab-schreiben" data-tab="schreiben"><span class="n">3</span>Schreiben</button>
-    </nav>
-  </header>
+<!-- VORLAGE -->
+<main class="view" id="p-vorlage" hidden>
+  <h1 class="large">Vorlage</h1>
+  <p class="lead">Einmal ausfüllen, dann schreibt die App jeden Text in deiner Handschrift.</p>
 
-  <!-- 1 VORLAGE -->
-  <section class="panel" id="p-vorlage" hidden>
-    <div class="grid2">
-      <div class="card">
-        <h2>Vorlage erstellen</h2>
-        <p class="muted">Jedes Zeichen bekommt eine Zeile mit 8 Kästchen. Schreib es 8-mal, jedes Mal ein bisschen anders – so wirkt der fertige Text später natürlich.</p>
-        <div class="checks" id="sets"></div>
-        <div class="row">
-          <button class="btn primary" id="btn-template">Vorlage als PDF laden</button>
-          <span class="small muted" id="tpl-info"></span>
-        </div>
-        <div id="tpl-result"></div>
-      </div>
-      <div class="card">
-        <h2>So geht's mit GoodNotes</h2>
-        <ol class="howto">
-          <li>Vorlage laden und mit <b>Teilen → GoodNotes</b> als neues Dokument importieren.</li>
-          <li>In jedes Kästchen das Zeichen vom Zeilenanfang schreiben. Kleinbuchstaben sitzen auf der <b>dunkleren Grundlinie</b>, die gestrichelte Linie zeigt die Höhe von „x“.</li>
-          <li>Dunkle Stiftfarbe nehmen (schwarz oder blau). Leere Kästchen sind erlaubt.</li>
-          <li>Die Ecken-Quadrate und den Code unten nicht übermalen – daran erkennt die Seite, welche Zeichen drauf sind.</li>
-          <li>In GoodNotes <b>Teilen → Exportieren → PDF</b> und die Datei in Schritt 2 hochladen.</li>
-        </ol>
-        <p class="small muted" style="margin-top:12px">Lieber direkt hier schreiben? In Schritt 2 kannst du jedes Zeichen auch mit dem Apple Pencil im Browser zeichnen.</p>
-      </div>
-    </div>
-  </section>
+  <div class="group">
+    <div class="row"><span class="num">1</span><span class="grow"><span class="t">Vorlage laden</span><span class="s">PDF mit 8 Kästchen pro Zeichen</span></span></div>
+    <div class="row"><span class="num">2</span><span class="grow"><span class="t">In GoodNotes ausfüllen</span><span class="s">Öffnen in GoodNotes, jedes Kästchen mit dem Pencil beschreiben</span></span></div>
+    <div class="row"><span class="num">3</span><span class="grow"><span class="t">Hier hochladen</span><span class="s">GoodNotes: Teilen → Exportieren → PDF, dann im Tab „Schrift“</span></span></div>
+  </div>
+  <button class="btn-filled mt" id="btn-template">Vorlage laden</button>
+  <div id="tpl-result"></div>
 
-  <!-- 2 HANDSCHRIFT -->
-  <section class="panel" id="p-schrift" hidden>
-    <div class="grid2">
-      <div class="card">
-        <h2>Ausgefüllte Vorlage hochladen</h2>
-        <p class="muted small">PDF-Export aus GoodNotes oder Bilder der Seiten (PNG/JPG). Reihenfolge egal, du kannst Seiten auch einzeln nachreichen.</p>
-        <label class="drop" id="drop">
-          <input type="file" id="file" accept="application/pdf,image/*" multiple>
-          <b>Datei auswählen</b>
-          <span class="small muted">oder hierher ziehen</span>
-        </label>
-        <div id="up-status" style="margin-top:12px"></div>
-      </div>
-      <div class="card">
-        <h2>Deine Schrift</h2>
-        <p class="muted small" id="lib-summary"></p>
-        <div class="row" style="margin-top:10px">
-          <button class="btn" id="btn-export">Schrift sichern (.json)</button>
-          <label class="btn" style="position:relative">Sicherung laden<input type="file" id="import" accept=".json,application/json" style="position:absolute;opacity:0;inset:0;width:100%;cursor:pointer"></label>
-          <button class="btn danger" id="btn-clear">Alles löschen</button>
-        </div>
-        <div id="clear-confirm"></div>
-        <p class="small muted" style="margin-top:10px">Die Schrift bleibt in diesem Browser gespeichert. Mit der Sicherung kannst du sie auf ein anderes Gerät mitnehmen.</p>
-      </div>
-    </div>
+  <h2 class="group-title">Zeichen in der Vorlage</h2>
+  <div class="group" id="sets"></div>
+  <p class="footnote" id="tpl-info"></p>
 
-    <div class="card" id="draw-card">
-      <div class="drawhead">
-        <div class="bigchar" id="d-char">a</div>
-        <div style="flex:1;min-width:200px">
-          <h2 style="margin:0">Zeichnen &amp; korrigieren</h2>
-          <p class="muted small" style="margin:2px 0 0">Schreib das Zeichen in die Kästchen (Apple Pencil, Finger oder Maus). Mit × leerst du eine einzelne Variante.</p>
-        </div>
-        <div class="row">
-          <button class="btn" id="d-prev" aria-label="Vorheriges Zeichen">←</button>
-          <button class="btn" id="d-clear">Alle leeren</button>
-          <button class="btn primary" id="d-save">Speichern &amp; weiter →</button>
-        </div>
+  <h2 class="group-title">Beim Ausfüllen</h2>
+  <div class="group">
+    <div class="row"><span class="grow"><span class="t">Auf die Linie schreiben</span><span class="s">Kleinbuchstaben sitzen auf der durchgehenden Linie, die gestrichelte zeigt die Höhe von „x“.</span></span></div>
+    <div class="row"><span class="grow"><span class="t">8-mal, leicht verschieden</span><span class="s">So wirkt der Text später natürlich. Leere Kästchen sind kein Problem.</span></span></div>
+    <div class="row"><span class="grow"><span class="t">Dunkler Stift</span><span class="s">Schwarz oder Blau. Ecken-Quadrate und den Code unten frei lassen.</span></span></div>
+  </div>
+</main>
+
+<!-- SCHRIFT -->
+<main class="view" id="p-schrift" hidden>
+  <h1 class="large">Schrift</h1>
+  <p class="lead" id="lib-summary"></p>
+  <label class="upload" id="drop">
+    <input type="file" id="file" accept="application/pdf,image/*" multiple>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+    <b>Ausgefüllte Vorlage hochladen</b>
+    <span>PDF aus GoodNotes oder Fotos der Seiten</span>
+  </label>
+  <div id="up-status"></div>
+
+  <h2 class="group-title">Deine Zeichen</h2>
+  <div class="group" id="lib"></div>
+
+  <h2 class="group-title">Sicherung</h2>
+  <div class="group">
+    <button class="row link" id="btn-export" type="button">Schrift sichern</button>
+    <label class="row link" style="cursor:pointer">Sicherung laden<input type="file" id="import" accept=".json,application/json" hidden></label>
+    <button class="row danger" id="btn-clear" type="button">Schrift löschen</button>
+  </div>
+  <div id="clear-confirm"></div>
+  <p class="footnote">Die Schrift bleibt in diesem Browser gespeichert. Mit der Sicherung nimmst du sie auf ein anderes Gerät mit.</p>
+</main>
+
+<!-- SCHREIBEN -->
+<main class="view wide" id="p-schreiben" hidden>
+  <div class="write">
+    <div>
+      <h1 class="large">Schreiben</h1>
+      <div class="banner" id="demo-banner" hidden>
+        <span class="dot"></span>
+        <span class="grow"><b>Beispielschrift</b> – bis du deine Vorlage hochgeladen hast.</span>
+        <button class="btn-tinted" data-go="vorlage" type="button">Vorlage</button>
       </div>
-      <div class="cells" id="cells"></div>
-      <div class="charpick" id="charpick"></div>
-    </div>
+      <h2 class="group-title">Text</h2>
+      <label for="text" hidden>Text</label>
+      <textarea id="text" spellcheck="true" placeholder="Text hier einfügen …"></textarea>
 
-    <div class="card">
-      <div class="libhead"><h2>Alle Zeichen</h2><span class="small muted">Tippen zum Bearbeiten</span></div>
-      <div id="lib" style="margin-top:12px"></div>
-    </div>
-  </section>
-
-  <!-- 3 SCHREIBEN -->
-  <section class="panel" id="p-schreiben" hidden>
-    <div id="demo-banner" class="banner" hidden>
-      <span><b>Beispielschrift aktiv.</b> Die Vorschau nutzt eine Muster-Handschrift, bis du deine eigene in Schritt 1–2 angelegt hast.</span>
-      <button class="btn" data-go="vorlage">Eigene Schrift anlegen</button>
-    </div>
-    <div class="write">
-      <div class="card">
-        <label class="field" for="text"><span>Text</span></label>
-        <textarea id="text" spellcheck="true"></textarea>
-        <div class="fields">
-          <div class="two">
-            <label class="field"><span>Format</span>
-              <select id="o-format">
-                <option value="a4p">A4 hoch</option><option value="a4l">A4 quer</option>
-                <option value="a5p">A5 hoch</option><option value="letter">US Letter</option>
-              </select></label>
-            <label class="field"><span>Papier</span>
-              <select id="o-paper">
-                <option value="lined">Liniert</option><option value="grid">Kariert</option>
-                <option value="dots">Punktraster</option><option value="blank">Blanko</option>
-              </select></label>
+      <h2 class="group-title">Aussehen</h2>
+      <div class="group">
+        <div class="row stack"><span>Papier</span>
+          <div class="seg" role="radiogroup" aria-label="Papier" id="seg-paper">
+            <button type="button" role="radio" data-v="lined">Liniert</button>
+            <button type="button" role="radio" data-v="grid">Kariert</button>
+            <button type="button" role="radio" data-v="dots">Punkte</button>
+            <button type="button" role="radio" data-v="blank">Blanko</button>
           </div>
-          <label class="field"><span>Schriftgröße <output id="v-size"></output></span><input type="range" id="o-size" min="1.6" max="6" step="0.1"></label>
-          <label class="field"><span>Zeilenabstand <output id="v-line"></output></span><input type="range" id="o-line" min="5" max="14" step="0.1"></label>
-          <div class="two">
-            <label class="field"><span>Buchstaben <output id="v-ls"></output></span><input type="range" id="o-ls" min="-20" max="60" step="1"></label>
-            <label class="field"><span>Wörter <output id="v-ws"></output></span><input type="range" id="o-ws" min="40" max="200" step="5"></label>
-          </div>
-          <label class="field"><span>Natürliche Unruhe <output id="v-mess"></output></span><input type="range" id="o-mess" min="0" max="100" step="1"></label>
-          <label class="field"><span>Rand <output id="v-margin"></output></span><input type="range" id="o-margin" min="5" max="35" step="1"></label>
-          <div class="field"><span>Tinte</span>
-            <div class="inks" id="inks"></div>
-          </div>
+          <input type="hidden" id="o-paper" value="lined">
         </div>
+        <div class="row stack"><span>Tinte</span><div class="inks" id="inks"></div></div>
+        <label class="row stack"><span class="head"><span>Größe</span><output class="val" id="v-size"></output></span><input type="range" id="o-size" min="1.6" max="6" step="0.1"></label>
       </div>
-      <div class="card sticky">
-        <div class="pvhead">
-          <h2 style="margin:0">Vorschau <span class="small muted" id="pv-info"></span></h2>
-          <div class="row">
-            <button class="btn" id="btn-shuffle">Neu mischen</button>
-            <button class="btn primary" id="btn-pdf">PDF für GoodNotes</button>
-          </div>
-        </div>
-        <div id="pdf-result"></div>
-        <p class="missing" id="missing" hidden></p>
-        <div class="pages" id="pages"></div>
-      </div>
+
+      <details class="more group" style="margin-top:20px">
+        <summary class="row"><span class="grow">Weitere Einstellungen</span><span class="chev">›</span></summary>
+        <label class="row"><span class="grow">Format</span>
+          <select class="plain" id="o-format"><option value="a4p">A4 hoch</option><option value="a4l">A4 quer</option><option value="a5p">A5 hoch</option><option value="letter">US Letter</option></select><span class="chev">›</span></label>
+        <label class="row stack"><span class="head"><span>Zeilenabstand</span><output class="val" id="v-line"></output></span><input type="range" id="o-line" min="5" max="14" step="0.1"></label>
+        <label class="row stack"><span class="head"><span>Buchstabenabstand</span><output class="val" id="v-ls"></output></span><input type="range" id="o-ls" min="-20" max="60" step="1"></label>
+        <label class="row stack"><span class="head"><span>Wortabstand</span><output class="val" id="v-ws"></output></span><input type="range" id="o-ws" min="40" max="200" step="5"></label>
+        <label class="row stack"><span class="head"><span>Natürliche Unruhe</span><output class="val" id="v-mess"></output></span><input type="range" id="o-mess" min="0" max="100" step="1"></label>
+        <label class="row stack"><span class="head"><span>Rand</span><output class="val" id="v-margin"></output></span><input type="range" id="o-margin" min="5" max="35" step="1"></label>
+      </details>
     </div>
-  </section>
-</div>
+
+    <div class="preview">
+      <div class="pvhead">
+        <h2>Vorschau <span class="s" id="pv-info"></span></h2>
+        <button class="btn-tinted" id="btn-shuffle" type="button">Neu mischen</button>
+      </div>
+      <button class="btn-filled" id="btn-pdf" type="button">PDF für GoodNotes erstellen</button>
+      <div id="pdf-result"></div>
+      <p class="missing mt" id="missing" hidden></p>
+      <div class="pages mt" id="pages"></div>
+    </div>
+  </div>
+</main>
+
+<nav class="tabbar" aria-label="Bereiche"><div class="in" role="tablist">
+  <button class="tab" role="tab" data-tab="vorlage" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg>Vorlage</button>
+  <button class="tab" role="tab" data-tab="schrift" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.5 4.5l4 4L9 19l-5 1 1-5z"/><path d="M13.5 6.5l4 4"/></svg>Schrift</button>
+  <button class="tab" role="tab" data-tab="schreiben" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h9"/><path d="M15.5 18.5c1.2-2 2.3-2.6 3-1.6.6.9-1 2-.2 2.4.6.3 1.4-.4 1.7-.8"/></svg>Schreiben</button>
+</div></nav>
 
 <script>
 "use strict";
@@ -380,7 +364,6 @@ function makeTemplate(mask){
   }
   return doc.output("blob");
 }
-
 /* ---------- 2: Erkennung ---------- */
 async function fileToCanvases(f){
   const out = [];
@@ -455,111 +438,53 @@ function extractPage(cv, fallbackIdx, fallbackMask){
   }
   return {pageIdx, codeOk, marksOk, result};
 }
-
 async function handleUpload(files){
-  const st = $("#up-status");
-  st.innerHTML = ""; const s = el("div",{className:"status"}); st.append(s);
-  s.innerHTML = '<span class="spin"></span> Seiten werden gelesen …';
+  const st = $("#up-status"); st.innerHTML = "";
+  const s = el("div",{className:"status"}); st.append(s);
+  const say = (t) => { s.innerHTML = ""; s.append(el("span",{className:"spin"}), el("span",{textContent:t})); };
+  say("Seiten werden gelesen …");
   try {
     const canvases = [];
     for (const f of files) canvases.push(...await fileToCanvases(f));
-    let chars = 0, vars = 0, warn = [];
+    let chars = 0, vars = 0; const warn = [];
     const mask = selectedMask() || 31;
     for (let i=0;i<canvases.length;i++){
-      s.innerHTML = `<span class="spin"></span> Seite ${i+1} von ${canvases.length} wird ausgewertet …`;
+      say(`Seite ${i+1} von ${canvases.length} wird ausgewertet …`);
       await tick();
       const r = extractPage(canvases[i], i, mask);
-      if (!r.codeOk) warn.push(`Seite ${i+1}: Code nicht lesbar, Reihenfolge angenommen`);
-      else if (!r.marksOk) warn.push(`Seite ${i+1}: Ecken nicht gefunden, Standardposition genutzt`);
+      if (!r.codeOk) warn.push(`Seite ${i+1}: Code nicht lesbar, Reihenfolge angenommen.`);
+      else if (!r.marksOk) warn.push(`Seite ${i+1}: Ecken nicht gefunden.`);
       for (const [ch, v] of Object.entries(r.result)){ lib[ch] = v; chars++; vars += v.length; }
     }
-    await saveLib(); renderLib(); renderPick(); loadDrawChar(curChar);
+    await saveLib(); renderLib();
     s.className = "status " + (warn.length ? "warn" : "ok");
-    s.textContent = `${canvases.length} Seite(n) gelesen · ${chars} Zeichen · ${vars} Varianten übernommen.` + (warn.length ? " " + warn.join(" · ") : "");
+    s.textContent = (chars ? `Fertig: ${chars} Zeichen mit ${vars} Varianten übernommen.` : "Keine Handschrift gefunden – sind die Kästchen beschrieben?") + (warn.length ? " " + warn.join(" ") : "");
     schedule();
   } catch(e){
     console.error(e); s.className = "status err";
-    s.textContent = "Die Datei ließ sich nicht lesen. Bitte als PDF oder PNG/JPG exportieren und erneut versuchen.";
+    s.textContent = "Die Datei ließ sich nicht lesen. Exportiere sie in GoodNotes als PDF und versuch es noch einmal.";
   }
 }
 
-/* ---------- Bibliothek-Anzeige ---------- */
 function renderLib(){
   const box = $("#lib"); box.innerHTML = "";
   let n = 0, v = 0;
   for (const s of SETS){
     const have = s.chars.filter(c => lib[c]?.length).length;
-    const sec = el("div",{className:"libsec"});
-    sec.append(el("div",{className:"libhead"},[el("h3",{textContent:s.name}), el("span",{className:"small muted",textContent:`${have} / ${s.chars.length}`})]));
+    box.append(el("div",{className:"lib-sub",textContent:`${s.name} · ${have}/${s.chars.length}`}));
     const tiles = el("div",{className:"tiles"});
     for (const c of s.chars){
-      const g = lib[c] || []; n += g.length ? 1 : 0; v += g.length;
-      const t = el("button",{className:"tile" + (g.length ? (g.length>=8 ? " full" : "") : " empty"), title:`„${c}“ bearbeiten`});
-      t.append(el("span",{className:"lab",textContent:c}));
-      if (g.length){ t.append(el("img",{src:g[0].src, alt:""})); t.append(el("span",{className:"cnt",textContent:`${g.length}/8`})); }
-      t.onclick = () => { loadDrawChar(c); $("#draw-card").scrollIntoView({behavior:"smooth", block:"start"}); };
+      const g = lib[c] || []; if (g.length){ n++; v += g.length; }
+      const t = el("div",{className:"tile" + (g.length ? "" : " empty"), title:`„${c}“: ${g.length} Varianten`});
+      if (g.length){ t.append(el("img",{src:g[0].src, alt:c}), el("span",{className:"cnt",textContent:g.length})); }
+      else t.append(el("span",{textContent:c}));
       tiles.append(t);
     }
-    sec.append(tiles); box.append(sec);
+    box.append(tiles);
   }
-  $("#lib-summary").textContent = n ? `${n} von ${ALL.length} Zeichen angelegt, ${v} Varianten insgesamt.` : "Noch keine eigene Schrift gespeichert. Lade die ausgefüllte Vorlage hoch oder zeichne unten direkt.";
+  $("#lib-summary").textContent = n ? `${n} von ${ALL.length} Zeichen angelegt, ${v} Varianten.` : "Lade hier die in GoodNotes ausgefüllte Vorlage hoch.";
   $("#demo-banner").hidden = !!n;
 }
-
-/* ---------- Zeichnen ---------- */
-const DPX = 16; let curChar = "a"; const cellCanvases = [];
-function buildCells(){
-  const box = $("#cells");
-  for (let i=0;i<8;i++){
-    const wrap = el("div",{className:"cell"});
-    const c = el("canvas",{width:Math.round(CW*DPX), height:Math.round(CH*DPX)});
-    const ctx = c.getContext("2d"); ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#16181f"; ctx.fillStyle = "#16181f";
-    let last = null, penSeen = false;
-    const pt = e => { const r = c.getBoundingClientRect(); return [(e.clientX-r.left)/r.width*c.width, (e.clientY-r.top)/r.height*c.height, e.pressure || .5]; };
-    const seg = (a,b) => { ctx.lineWidth = (0.32 + 0.5*b[2]) * DPX; ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); };
-    c.addEventListener("pointerdown", e => { if (e.pointerType === "pen") penSeen = true; if (penSeen && e.pointerType === "touch") return;
-      e.preventDefault(); c.setPointerCapture(e.pointerId); last = pt(e); seg(last,last); });
-    c.addEventListener("pointermove", e => { if (!last) return; const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-      for (const ev of (evs.length ? evs : [e])){ const p = pt(ev); seg(last,p); last = p; } });
-    const end = () => { last = null; };
-    c.addEventListener("pointerup", end); c.addEventListener("pointercancel", end);
-    const x = el("button",{className:"x", textContent:"×", title:"Variante leeren", type:"button"});
-    x.onclick = () => ctx.clearRect(0,0,c.width,c.height);
-    wrap.append(c, el("span",{className:"k",textContent:i+1}), x);
-    box.append(wrap); cellCanvases.push(c);
-  }
-}
-async function loadDrawChar(ch){
-  curChar = ch; $("#d-char").textContent = ch;
-  for (const c of cellCanvases) c.getContext("2d").clearRect(0,0,c.width,c.height);
-  const g = lib[ch] || [];
-  for (let i=0;i<Math.min(8,g.length);i++){
-    const img = await loadImg(g[i]); if (!img || curChar !== ch) continue;
-    cellCanvases[i].getContext("2d").drawImage(img, g[i].x*DPX, (BASE+g[i].y)*DPX, g[i].w*DPX, g[i].h*DPX);
-  }
-  renderPick();
-}
-async function saveDrawChar(){
-  const w = Math.round(CW*PX), h = Math.round(CH*PX), vars = [];
-  for (const c of cellCanvases){
-    const s = el("canvas",{width:w,height:h}); const sc = s.getContext("2d",{willReadFrequently:true});
-    sc.drawImage(c,0,0,w,h);
-    const d = sc.getImageData(0,0,w,h).data, a = new Float32Array(w*h);
-    for (let i=0;i<a.length;i++) a[i] = d[i*4+3]/255;
-    const g = glyphFromAlpha(a,w,h); if (g) vars.push(g);
-  }
-  if (vars.length) lib[curChar] = vars; else delete lib[curChar];
-  await saveLib(); renderLib(); schedule();
-  toast(vars.length ? `„${curChar}“ gespeichert (${vars.length} Varianten)` : `„${curChar}“ ist jetzt leer`);
-}
-function renderPick(){
-  const box = $("#charpick"); box.innerHTML = "";
-  for (const c of ALL){
-    const b = el("button",{textContent:c, type:"button", className:(lib[c]?.length ? "has" : "") + (c === curChar ? " cur" : ""), title:`„${c}“`});
-    b.onclick = () => loadDrawChar(c); box.append(b);
-  }
-}
-
 /* ---------- Beispielschrift ---------- */
 async function makeDemo(){
   try { await document.fonts.load('60px "Caveat"'); } catch(e){}
@@ -726,59 +651,58 @@ async function buildPdf(){
   doc.setProperties({title:"Handschrift", creator:"Handschrift-Studio"});
   return doc.output("blob");
 }
-
 /* ---------- Dateien ausgeben ---------- */
 let dl = null;
 (async () => { try { dl = await window.claude?.use?.("downloads"); } catch(e){ dl = null; } })();
 function offerFile(container, blob, name, label){
   container.innerHTML = "";
   const file = new File([blob], name, {type: blob.type || "application/pdf"});
-  const box = el("div",{className:"result"});
   const kb = Math.max(1, Math.round(blob.size/1024));
-  box.append(el("div",{className:"small"},[el("b",{textContent:name}), document.createTextNode(` · ${kb > 1024 ? (kb/1024).toFixed(1)+" MB" : kb+" KB"} · ${label}`)]));
-  const row = el("div",{className:"row"});
+  const box = el("div",{className:"result"});
+  box.append(el("div",{className:"meta"},[el("b",{textContent:name}), document.createTextNode(` · ${kb > 1024 ? (kb/1024).toFixed(1).replace(".",",")+" MB" : kb+" KB"}${label ? " · "+label : ""}`)]));
+  const acts = el("div",{className:"acts"});
   if (dl){
-    const b = el("button",{className:"btn primary",textContent:"Speichern / Teilen"});
-    b.onclick = async () => { try { await dl.save({filename:name, data:blob}); toast("Datei übergeben"); } catch(e){ if (e?.code !== "declined") toast("Speichern war hier nicht möglich."); } };
-    row.append(b);
+    const b = el("button",{className:"btn-filled",textContent:"In GoodNotes öffnen / Sichern", type:"button"});
+    b.onclick = async () => { try { await dl.save({filename:name, data:blob}); } catch(e){ if (e?.code !== "declined") toast("Speichern ist hier gerade nicht möglich."); } };
+    acts.append(b);
   } else {
     if (navigator.canShare && navigator.canShare({files:[file]})){
-      const b = el("button",{className:"btn primary",textContent:"Teilen → GoodNotes"});
+      const b = el("button",{className:"btn-filled",textContent:"In GoodNotes öffnen", type:"button"});
       b.onclick = async () => { try { await navigator.share({files:[file]}); } catch(e){} };
-      row.append(b);
+      acts.append(b);
     }
-    const url = URL.createObjectURL(blob);
-    row.append(el("a",{className:"btn",href:url,download:name,textContent:"Herunterladen"}));
+    acts.append(el("a",{className: acts.children.length ? "btn-gray" : "btn-filled", href:URL.createObjectURL(blob), download:name, textContent:"Herunterladen"}));
   }
-  box.append(row); container.append(box);
+  box.append(acts); container.append(box);
 }
 
 /* ---------- Oberfläche ---------- */
+const TABS = ["vorlage","schrift","schreiben"];
 function showTab(id){
-  for (const b of document.querySelectorAll("nav.steps button")){ const on = b.dataset.tab === id; b.setAttribute("aria-selected", on); }
-  for (const p of ["vorlage","schrift","schreiben"]) $("#p-"+p).hidden = p !== id;
+  document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === id));
+  for (const p of TABS) $("#p-"+p).hidden = p !== id;
   try { if (location.hash !== "#"+id) history.replaceState(null, "", "#"+id); } catch(e){}
+  window.scrollTo(0,0);
   if (id === "schreiben") schedule();
 }
 function initUI(){
-  document.querySelectorAll("nav.steps button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  document.querySelectorAll(".tab").forEach(b => b.onclick = () => showTab(b.dataset.tab));
   document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => showTab(b.dataset.go));
-  // Sets
+  // Zeichengruppen
   const sets = $("#sets"), savedMask = LS.get("hs-mask", 31);
   SETS.forEach((s,i) => {
-    const cb = el("input",{type:"checkbox", id:"set-"+s.id, checked: !!(savedMask & (1<<i))});
+    const cb = el("input",{type:"checkbox", className:"switch", id:"set-"+s.id, checked: !!(savedMask & (1<<i))});
+    cb.setAttribute("aria-label", s.name);
     cb.onchange = updTpl;
-    sets.append(el("label",{},[cb, el("span",{textContent:`${s.name} (${s.chars.length})`}), el("span",{className:"chars",textContent:s.chars.join("")})]));
+    const r = el("label",{className:"row", htmlFor:"set-"+s.id});
+    r.append(el("span",{className:"grow"},[el("span",{className:"t",textContent:s.name}), el("span",{className:"chars",textContent:s.chars.join(" ")})]), cb);
+    sets.append(r);
   });
   function updTpl(){ const m = selectedMask(); LS.set("hs-mask", m); const n = charsFor(m).length;
-    $("#tpl-info").textContent = n ? `${n} Zeichen · ${n*8} Kästchen · ${Math.ceil(n/GRID.rows)} Seiten` : "Bitte mindestens eine Gruppe wählen";
-    $("#btn-template").disabled = !n; }
+    $("#tpl-info").textContent = n ? `${n} Zeichen auf ${Math.ceil(n/GRID.rows)} Seiten (A4).` : "Wähle mindestens eine Gruppe.";
+    $("#btn-template").disabled = !n; $("#tpl-result").innerHTML = ""; }
   updTpl();
-  $("#btn-template").onclick = async () => {
-    const b = $("#btn-template"); b.disabled = true;
-    try { const blob = makeTemplate(selectedMask()); offerFile($("#tpl-result"), blob, "Handschrift-Vorlage.pdf", "in GoodNotes importieren"); }
-    finally { b.disabled = false; }
-  };
+  $("#btn-template").onclick = () => { offerFile($("#tpl-result"), makeTemplate(selectedMask()), "Handschrift-Vorlage.pdf", `${Math.ceil(charsFor(selectedMask()).length/GRID.rows)} Seiten`); };
   // Upload
   const drop = $("#drop"), fi = $("#file");
   fi.onchange = () => { if (fi.files.length) handleUpload([...fi.files]); fi.value = ""; };
@@ -788,50 +712,49 @@ function initUI(){
   // Sicherung
   $("#btn-export").onclick = () => {
     if (!Object.keys(lib).length){ toast("Noch keine eigene Schrift zum Sichern."); return; }
-    const blob = new Blob([JSON.stringify({app:"handschrift-studio", version:1, glyphs:lib})], {type:"application/json"});
-    offerFile($("#clear-confirm"), blob, "meine-handschrift.json", "Sicherung");
+    offerFile($("#clear-confirm"), new Blob([JSON.stringify({app:"handschrift-studio", version:1, glyphs:lib})], {type:"application/json"}), "meine-handschrift.json", "");
   };
   $("#import").onchange = async e => {
     const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-    try { const j = JSON.parse(await f.text()); if (!j.glyphs) throw 0; lib = j.glyphs; await saveLib(); renderLib(); loadDrawChar(curChar); schedule(); toast("Sicherung geladen"); }
-    catch(err){ toast("Das ist keine gültige Handschrift-Sicherung."); }
+    try { const j = JSON.parse(await f.text()); if (!j.glyphs) throw 0; lib = j.glyphs; await saveLib(); renderLib(); schedule(); toast("Sicherung geladen"); }
+    catch(err){ toast("Das ist keine Handschrift-Sicherung."); }
   };
   $("#btn-clear").onclick = () => {
     const box = $("#clear-confirm"); box.innerHTML = "";
     const r = el("div",{className:"result"});
-    r.append(el("span",{className:"small",textContent:"Wirklich die komplette eigene Schrift löschen? Das lässt sich nicht rückgängig machen."}));
-    const yes = el("button",{className:"btn danger",textContent:"Ja, löschen"}), no = el("button",{className:"btn",textContent:"Abbrechen"});
-    yes.onclick = async () => { lib = {}; await saveLib(); renderLib(); loadDrawChar(curChar); schedule(); box.innerHTML = ""; toast("Schrift gelöscht"); };
+    r.append(el("div",{className:"meta",textContent:"Deine gespeicherte Schrift wird aus diesem Browser gelöscht."}));
+    const yes = el("button",{className:"btn-gray",textContent:"Löschen",type:"button"}); yes.style.color = "var(--red)";
+    const no = el("button",{className:"btn-gray",textContent:"Abbrechen",type:"button"});
+    yes.onclick = async () => { lib = {}; await saveLib(); renderLib(); schedule(); box.innerHTML = ""; toast("Schrift gelöscht"); };
     no.onclick = () => box.innerHTML = "";
-    r.append(el("div",{className:"row"},[yes,no])); box.append(r);
+    r.append(el("div",{className:"acts"},[no,yes])); box.append(r);
   };
-  // Zeichnen
-  buildCells();
-  $("#d-clear").onclick = () => cellCanvases.forEach(c => c.getContext("2d").clearRect(0,0,c.width,c.height));
-  $("#d-save").onclick = async () => { await saveDrawChar(); const i = ALL.indexOf(curChar); loadDrawChar(ALL[(i+1) % ALL.length]); };
-  $("#d-prev").onclick = () => { const i = ALL.indexOf(curChar); loadDrawChar(ALL[(i-1+ALL.length) % ALL.length]); };
   // Schreiben
   const def = {format:"a4p", paper:"lined", size:2.9, line:8, ls:3, ws:85, mess:45, margin:20};
   const o = Object.assign({}, def, LS.get("hs-opts", {}));
   for (const k of ["format","paper","size","line","ls","ws","mess","margin"]) $("#o-"+k).value = o[k];
+  const segs = document.querySelectorAll("#seg-paper button");
+  const setPaper = v => { $("#o-paper").value = v; segs.forEach(b => b.setAttribute("aria-checked", b.dataset.v === v)); };
+  segs.forEach(b => b.onclick = () => { setPaper(b.dataset.v); schedule(); }); setPaper(o.paper);
   $("#text").value = LS.get("hs-text", "Liebe Lena,\n\nvielen Dank für die Unterlagen aus der Vorlesung! Ich habe mir die Zusammenfassung zu Kapitel 4 schon angeschaut – die Grafik zur Zellatmung ist super erklärt.\n\nKönnen wir uns am Donnerstag um 14:30 Uhr in der Bibliothek treffen? Dann gehen wir die Übungsaufgaben 3 bis 7 gemeinsam durch.\n\nViele Grüße und bis bald!");
-  const fmt = {size:v=>`${(+v).toFixed(1)} mm`, line:v=>`${(+v).toFixed(1)} mm`, ls:v=>`${v} %`, ws:v=>`${v} %`, mess:v=>`${v} %`, margin:v=>`${v} mm`};
+  const mm = v => `${(+v).toFixed(1).replace(".",",")} mm`;
+  const fmt = {size:mm, line:mm, ls:v=>`${v} %`, ws:v=>`${v} %`, mess:v=>`${v} %`, margin:v=>`${v} mm`};
   for (const k in fmt){ const i = $("#o-"+k), out = $("#v-"+k); const upd = () => out.textContent = fmt[k](i.value); upd(); i.addEventListener("input", () => { upd(); schedule(); }); }
-  for (const k of ["format","paper"]) $("#o-"+k).addEventListener("change", schedule);
+  $("#o-format").addEventListener("change", schedule);
   $("#text").addEventListener("input", schedule);
   const inks = $("#inks");
-  const custom = el("input",{type:"color", value:inkColor, title:"Eigene Farbe", id:"o-inkcustom"});
   const setInk = c => { inkColor = c; LS.set("hs-ink", c); inks.querySelectorAll(".ink").forEach(b => b.setAttribute("aria-pressed", b.dataset.c === c)); schedule(); };
-  INKS.forEach(([n,c]) => { const b = el("button",{className:"ink", title:n, type:"button"}); b.dataset.c = c; b.style.background = c; b.setAttribute("aria-label", n); b.onclick = () => { custom.value = c; setInk(c); }; inks.append(b); });
-  custom.oninput = () => setInk(custom.value); inks.append(custom); setInk(inkColor);
+  INKS.forEach(([n,c]) => { const b = el("button",{className:"ink", title:n, type:"button"}); b.dataset.c = c; b.style.background = c; b.setAttribute("aria-label", n); b.onclick = () => setInk(c); inks.append(b); });
+  if (!INKS.some(([,c]) => c === inkColor)) inkColor = INKS[1][1];
+  setInk(inkColor);
   $("#btn-shuffle").onclick = () => { seed = (seed * 1103515245 + 12345) >>> 0; LS.set("hs-seed", seed); schedule(); };
   $("#btn-pdf").onclick = async () => {
     const b = $("#btn-pdf"), box = $("#pdf-result");
-    if (!lastLayout) await renderPreview();
-    b.disabled = true; box.innerHTML = '<div class="result small"><span><span class="spin"></span> PDF wird erstellt …</span></div>';
-    try { const blob = await buildPdf(); offerFile(box, blob, "Handschrift.pdf", `${lastLayout.res.pages.length} Seite(n)` + (Object.keys(lib).length ? "" : " · Beispielschrift")); }
-    catch(e){ console.error(e); box.innerHTML = ""; box.append(el("div",{className:"status err",textContent:"PDF konnte nicht erstellt werden. Bitte kürzeren Text versuchen."})); }
-    finally { b.disabled = false; }
+    await renderPreview();
+    b.disabled = true; const label = b.textContent; b.innerHTML = '<span class="spin" style="border-color:rgba(255,255,255,.4);border-top-color:#fff"></span> PDF wird erstellt …';
+    try { const blob = await buildPdf(); offerFile(box, blob, "Handschrift.pdf", `${lastLayout.res.pages.length} Seite${lastLayout.res.pages.length>1?"n":""}` + (Object.keys(lib).length ? "" : " · Beispielschrift")); box.scrollIntoView({behavior:"smooth", block:"nearest"}); }
+    catch(e){ console.error(e); box.innerHTML = ""; box.append(el("div",{className:"status err",textContent:"Das PDF konnte nicht erstellt werden. Versuch es mit einem kürzeren Text."})); }
+    finally { b.disabled = false; b.textContent = label; }
   };
   window.addEventListener("resize", schedule);
 }
@@ -839,10 +762,10 @@ function initUI(){
 (async function main(){
   initUI();
   const stored = await DB.get("lib"); if (stored && typeof stored === "object") lib = stored;
-  renderLib(); loadDrawChar("a");
+  renderLib();
   const h = (location.hash || "").slice(1);
-  showTab(["vorlage","schrift","schreiben"].includes(h) ? h : "schreiben");
-  if (!Object.keys(lib).length){ demo = await makeDemo(); }
+  showTab(TABS.includes(h) ? h : (Object.keys(lib).length ? "schreiben" : "vorlage"));
+  if (!Object.keys(lib).length) demo = await makeDemo();
   schedule();
 })();
 window.HS = {makeTemplate, extractPage, fileToCanvases, handleUpload, get lib(){ return lib; }, buildPdf, renderPreview, charsFor};
